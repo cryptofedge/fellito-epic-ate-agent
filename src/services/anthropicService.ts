@@ -29,7 +29,7 @@ export async function askFellito(
   const systemPrompt = buildSystemPrompt(activeModule, ragContext, isCreator, creatorOverrides, preferredLanguage, activeDepartment);
 
   // Map history to Anthropic message format
-  const messages: Anthropic.MessageParam[] = history
+  const messages: { role: 'user' | 'assistant'; content: string }[] = history
     .slice(-20) // last 20 messages for context window efficiency
     .map((msg) => ({
       role: msg.role,
