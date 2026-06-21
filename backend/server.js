@@ -391,6 +391,9 @@ textarea::placeholder{color:#8A8AA0;}
 .send-btn svg{fill:#000;}
 .send-btn:disabled{background:#1E1E2E;cursor:not-allowed;}
 .send-btn:disabled svg{fill:#8A8AA0;}
+.mic-btn{width:40px;height:40px;border-radius:50%;background:#1E1E2E;border:1px solid #2A2A3E;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;}
+.mic-btn.listening{background:#FF3B5C;border-color:#FF3B5C;animation:pulse .8s infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,59,92,.4);}50%{box-shadow:0 0 0 8px rgba(255,59,92,0);}}
 
 /* expired overlay */
 .expired-overlay{display:none;position:absolute;inset:0;background:rgba(10,10,15,.97);border-radius:44px;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:32px;text-align:center;z-index:100;}
@@ -432,10 +435,9 @@ textarea::placeholder{color:#8A8AA0;}
   <!-- ── SCREEN 1: Welcome / Go-Live Orientation ── -->
   <div class="screen active" id="screen-welcome">
     <div class="welcome-body">
-      <div class="golive-card">
-        <div class="golive-tag">YOUR GO-LIVE</div>
-        <div class="golive-name" id="glName">Loading...</div>
-        <div class="golive-dates" id="glDates"></div>
+      <div>
+        <div class="section-title">SELECT YOUR GO-LIVE</div>
+        <div class="chip-grid" id="goLiveChips"><div style="color:#8A8AA0;font-size:13px;">Loading Go-Lives...</div></div>
       </div>
 
       <div>
@@ -456,13 +458,17 @@ textarea::placeholder{color:#8A8AA0;}
   <!-- ── SCREEN 2: Chat ── -->
   <div class="screen" id="screen-chat">
     <div class="context-bar">
+      <div class="ctx-chip"><span id="ctxGoLive" style="color:#00E5FF;font-weight:700;">—</span></div>
       <div class="ctx-chip">Module: <span id="ctxModule">—</span></div>
       <div class="ctx-chip">Dept: <span id="ctxDept">—</span></div>
     </div>
     <div class="messages" id="messages"></div>
     <div class="input-bar">
+      <button class="mic-btn" id="micBtn" onclick="toggleMic()" title="Hold to speak">
+        <svg id="micIcon" width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1 17.93V21H9v2h6v-2h-2v-2.07A8 8 0 0 0 20 11h-2a6 6 0 0 1-12 0H4a8 8 0 0 0 7 7.93z"/></svg>
+      </button>
       <div class="input-wrap">
-        <textarea id="input" placeholder="Ask Fellito anything..." rows="1"></textarea>
+        <textarea id="input" placeholder="Ask Fellito or tap mic..." rows="1"></textarea>
       </div>
       <button class="send-btn" id="sendBtn" onclick="sendMessage()">
         <svg width="18" height="18" viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
@@ -487,10 +493,15 @@ const USER_NAME = '${name}';
 const ALL_MODULES = ${JSON.stringify(ALL_MODULES)};
 const ALL_DEPTS   = ${JSON.stringify(ALL_DEPTS)};
 
+let selectedGoLive   = '';
+let selectedGoLiveId = GOLIVE_ID || '';
 let selectedModule = '';
 let selectedDept   = '';
 let chatHistory    = [];
 let expired        = false;
+let recognition    = null;
+let isListening    = false;
+let currentAudio   = null;
 
 // ── Clock ──────────────────────────────────────────────────────────────────
 function updateClock() {
@@ -520,31 +531,48 @@ function expire() {
   document.getElementById('input').disabled   = true;
 }
 
-// ── Load Go-Live info ──────────────────────────────────────────────────────
+// ── Load Go-Live info + render all selection chips ─────────────────────────
 async function loadGoLive() {
-  const modules = ALL_MODULES;
-  const depts   = ALL_DEPTS;
-  let glName = 'Northwell Health — Epic Go-Live Demo';
-  let glDates = '';
-
+  let lives = [];
   try {
     const res = await fetch('/api/golives', { headers: { Authorization: 'Bearer ' + TOKEN } });
-    if (res.ok) {
-      const lives = await res.json();
-      const gl = GOLIVE_ID ? lives.find(g => g.id === GOLIVE_ID) : lives.find(g => g.active) ?? lives[0];
-      if (gl) {
-        glName  = gl.name;
-        glDates = (gl.startDate || '') + (gl.endDate ? ' → ' + gl.endDate : '');
-      }
-    }
+    if (res.ok) lives = await res.json();
   } catch {}
 
-  document.getElementById('glName').textContent  = glName;
-  document.getElementById('glDates').textContent = glDates;
+  // Render Go-Live chips
+  const glc = document.getElementById('goLiveChips');
+  glc.innerHTML = '';
+  const active = lives.filter(g => g.active);
+  const list   = active.length ? active : lives;
+
+  if (!list.length) {
+    glc.innerHTML = '<div style="color:#FF3B5C;font-size:13px;">No active Go-Lives found. Contact admin.</div>';
+  } else {
+    list.forEach(gl => {
+      const c = document.createElement('div');
+      c.className = 'chip';
+      c.textContent = gl.name;
+      if (gl.startDate && gl.endDate) c.title = gl.startDate + ' → ' + gl.endDate;
+      c.onclick = () => {
+        glc.querySelectorAll('.chip').forEach(x => x.classList.remove('selected'));
+        c.classList.add('selected');
+        selectedGoLive   = gl.name;
+        selectedGoLiveId = gl.id;
+        checkReady();
+      };
+      // Pre-select if goLiveId was set on the invite
+      if (GOLIVE_ID && gl.id === GOLIVE_ID) {
+        c.classList.add('selected');
+        selectedGoLive   = gl.name;
+        selectedGoLiveId = gl.id;
+      }
+      glc.appendChild(c);
+    });
+  }
 
   // Render module chips
   const mc = document.getElementById('moduleChips');
-  modules.forEach(m => {
+  ALL_MODULES.forEach(m => {
     const c = document.createElement('div');
     c.className = 'chip'; c.textContent = m;
     c.onclick = () => {
@@ -558,7 +586,7 @@ async function loadGoLive() {
 
   // Render department chips
   const dc = document.getElementById('deptChips');
-  depts.forEach(d => {
+  ALL_DEPTS.forEach(d => {
     const c = document.createElement('div');
     c.className = 'chip'; c.textContent = d;
     c.onclick = () => {
@@ -569,13 +597,18 @@ async function loadGoLive() {
     };
     dc.appendChild(c);
   });
+
+  checkReady();
 }
 
 function checkReady() {
   const btn = document.getElementById('startBtn');
-  if (selectedModule && selectedDept) {
+  if (selectedGoLive && selectedModule && selectedDept) {
     btn.disabled = false;
-    btn.textContent = 'Start Chatting with Fellito →';
+    btn.textContent = 'Start Session with Fellito →';
+  } else {
+    btn.disabled = true;
+    btn.textContent = 'Select Go-Live, module & department';
   }
 }
 
@@ -583,20 +616,20 @@ function checkReady() {
 async function startChat() {
   document.getElementById('screen-welcome').classList.remove('active');
   document.getElementById('screen-chat').classList.add('active');
+  document.getElementById('ctxGoLive').textContent = selectedGoLive || '—';
   document.getElementById('ctxModule').textContent = selectedModule;
   document.getElementById('ctxDept').textContent   = selectedDept;
-  document.getElementById('headerSub').textContent = selectedModule + ' · ' + selectedDept;
+  document.getElementById('headerSub').textContent = selectedGoLive ? selectedGoLive.split('—')[0].trim() + ' · ' + selectedModule : selectedModule + ' · ' + selectedDept;
   document.getElementById('input').focus();
 
   showTyping();
   try {
-    const sysPrompt = buildSystemPrompt();
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        system: sysPrompt,
+        system: buildSystemPrompt(),
         messages: [{ role: 'user', content: 'Introduce yourself and orient me for my shift.' }],
         max_tokens: 400,
       }),
@@ -606,6 +639,7 @@ async function startChat() {
     const data = await res.json();
     const reply = data.content?.[0]?.text ?? "Yo! I'm FELLITO. No wahala — I got you. What do you need?";
     addBubble('assistant', reply);
+    speakReply(reply);
     chatHistory.push({ role: 'user', content: 'Introduce yourself and orient me for my shift.' });
     chatHistory.push({ role: 'assistant', content: reply });
   } catch {
@@ -617,14 +651,69 @@ async function startChat() {
 function buildSystemPrompt() {
   return \`You are FELLITO — a digital clone of Fellito R. Rodriguez, a 13+ year Epic ATE Go-Live consultant with NYC/Nigerian swagger. You speak from lived experience — you have personally trained 250+ physicians and 300+ nurses across 20+ major health systems including Northwell Health, MSK Cancer Center, Columbia/NYP, Methodist Le Bonheur, Montefiore, and many more.
 
-This consultant is working the \${selectedModule} module in the \${selectedDept} department. Give them sharp, specific, real-world advice about Epic workflows for their exact context. No textbook answers — speak like a veteran consultant who has been elbow-to-elbow on the floor on Go-Live day.
+This consultant is supporting the \${selectedGoLive || 'current Go-Live'} — working the \${selectedModule} module in the \${selectedDept} department. Give them sharp, specific, real-world advice about Epic workflows for their exact context. No textbook answers — speak like a veteran consultant who has been elbow-to-elbow on the floor on Go-Live day.
 
 Rules:
-- Keep it concise and actionable — bullet points where helpful
+- Keep responses concise and actionable — bullet points where helpful
 - Use your voice: "no wahala", "sharp sharp", "I got you", NYC/Nigerian expressions where natural
 - Never mention Claude or Anthropic — you are FELLITO, powered by Eclat Universe
 - NEVER ask about or reference patient data, MRNs, or PHI — stay on workflows only
 - If they ask something outside Epic/EHR workflows, redirect back to Go-Live support\`;
+}
+
+// ── Voice output (ElevenLabs) ──────────────────────────────────────────────
+async function speakReply(text) {
+  try {
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    const res = await fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    currentAudio = new Audio(url);
+    currentAudio.play().catch(() => {});
+    currentAudio.onended = () => { URL.revokeObjectURL(url); currentAudio = null; };
+  } catch {}
+}
+
+// ── Voice input (Web Speech API) ───────────────────────────────────────────
+function toggleMic() {
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    alert('Voice input is not supported in this browser. Try Chrome.');
+    return;
+  }
+  if (isListening) { recognition?.stop(); return; }
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = 'en-US';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    isListening = true;
+    document.getElementById('micBtn').classList.add('listening');
+  };
+  recognition.onend = () => {
+    isListening = false;
+    document.getElementById('micBtn').classList.remove('listening');
+  };
+  recognition.onresult = (e) => {
+    const transcript = e.results[0][0].transcript;
+    const ta = document.getElementById('input');
+    ta.value = transcript;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
+    sendMessage();
+  };
+  recognition.onerror = () => {
+    isListening = false;
+    document.getElementById('micBtn').classList.remove('listening');
+  };
+  recognition.start();
 }
 
 // ── Chat helpers ───────────────────────────────────────────────────────────
@@ -679,6 +768,7 @@ async function sendMessage() {
     const data = await res.json();
     const reply = data.content?.[0]?.text ?? 'No wahala — try again.';
     addBubble('assistant', reply);
+    speakReply(reply);
     chatHistory.push({ role: 'assistant', content: reply });
   } catch {
     hideTyping();
@@ -713,6 +803,27 @@ html,body{height:100%;background:#050508;display:flex;align-items:center;justify
 <div class="sub">Contact your administrator for a new invite link.</div>
 </div></div></body></html>`;
 }
+
+// ─── TTS proxy (ElevenLabs) ───────────────────────────────────────────────────
+app.post('/api/tts', requireAuth, async (req, res) => {
+  const { text } = req.body;
+  if (!text) return res.status(400).json({ error: 'text required' });
+  const voiceId = process.env.ELEVENLABS_VOICE_ID;
+  const apiKey  = process.env.ELEVENLABS_API_KEY;
+  if (!voiceId || !apiKey) return res.status(503).json({ error: 'TTS not configured' });
+  try {
+    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      method: 'POST',
+      headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
+      body: JSON.stringify({ text: text.slice(0, 800), model_id: 'eleven_turbo_v2', voice_settings: { stability: 0.5, similarity_boost: 0.75 } }),
+    });
+    if (!r.ok) return res.status(502).json({ error: 'TTS upstream error' });
+    res.set('Content-Type', 'audio/mpeg');
+    r.body.pipe(res);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // ─── Health ───────────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok', agent: 'FELLITO' }));
