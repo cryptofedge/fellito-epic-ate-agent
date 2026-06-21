@@ -210,6 +210,8 @@
     <div class="nav-item active" onclick="showPage('dashboard')">📊 Dashboard</div>
     <div class="nav-item" onclick="showPage('golives')">⚡ Go-Live Events</div>
     <div class="nav-item" onclick="showPage('upload')">📄 Upload Docs</div>
+    <div class="nav-item" onclick="showPage('links')">🔗 Links Library</div>
+    <div class="nav-item" onclick="showPage('issues')">🚨 Issues Tracker</div>
     <div class="nav-item" id="nav-team" onclick="showPage('team')" style="display:none">👥 Team</div>
 
     <div class="sidebar-spacer"></div>
@@ -348,6 +350,101 @@
       <hr>
       <div class="section-label">Ingested Documents</div>
       <div id="ingested-docs"></div>
+    </div>
+
+    <!-- ── LINKS LIBRARY ── -->
+    <div id="page-links" class="page">
+      <div class="page-title">Links Library</div>
+      <div class="page-sub">Paste any URL — Fellito will fetch and study it as workflow knowledge.</div>
+
+      <div class="card" style="margin-bottom:24px;">
+        <div class="section-label">Add New Link</div>
+        <div id="links-alert" class="alert"></div>
+        <div class="form-group">
+          <label>URL</label>
+          <input type="url" id="link-url" placeholder="https://your-epic-workflow-doc.com/page" />
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Description (optional)</label>
+            <input type="text" id="link-desc" placeholder="e.g. Cadence scheduling tip sheet" />
+          </div>
+          <div class="form-group">
+            <label>Module Tag (optional)</label>
+            <select id="link-module">
+              <option value="">All Modules</option>
+              <optgroup label="Patient Access &amp; Scheduling">
+                <option value="Prelude">Prelude</option><option value="Grand Central">Grand Central</option>
+                <option value="Cadence">Cadence</option><option value="Welcome">Welcome</option>
+              </optgroup>
+              <optgroup label="Clinical Core">
+                <option value="EpicCare Ambulatory">EpicCare Ambulatory</option>
+                <option value="EpicCare Inpatient">EpicCare Inpatient</option>
+                <option value="ASAP">ASAP</option><option value="ClinDoc">ClinDoc</option>
+                <option value="Haiku / Canto / Rover">Haiku / Canto / Rover</option>
+              </optgroup>
+              <optgroup label="Perioperative &amp; Specialty">
+                <option value="OpTime">OpTime</option><option value="Anesthesia">Anesthesia</option>
+                <option value="Stork">Stork</option><option value="Bones">Bones</option>
+                <option value="Beacon">Beacon</option><option value="Cupid">Cupid</option>
+                <option value="Kaleidoscope">Kaleidoscope</option><option value="Wisdom">Wisdom</option>
+              </optgroup>
+              <optgroup label="Ancillary">
+                <option value="Beaker">Beaker</option><option value="Radiant">Radiant</option>
+                <option value="Willow">Willow</option><option value="Bugsy">Bugsy</option>
+              </optgroup>
+              <optgroup label="Revenue Cycle">
+                <option value="Resolute HB">Resolute HB</option><option value="Resolute PB">Resolute PB</option>
+                <option value="Tapestry">Tapestry</option>
+              </optgroup>
+              <optgroup label="Interop &amp; Data">
+                <option value="Bridges">Bridges</option><option value="Care Everywhere">Care Everywhere</option>
+                <option value="Clarity / Caboodle / Cogito">Clarity / Caboodle / Cogito</option>
+              </optgroup>
+              <optgroup label="Patient-Facing">
+                <option value="MyChart">MyChart</option><option value="Healthy Planet">Healthy Planet</option>
+                <option value="Cheers">Cheers</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-orange" onclick="submitLink()">🔗 Fetch &amp; Index Link</button>
+      </div>
+
+      <div class="section-label">Indexed Links</div>
+      <div id="links-list"><p style="color:var(--muted);font-size:13px;">Loading...</p></div>
+    </div>
+
+    <!-- ── ISSUES TRACKER ── -->
+    <div id="page-issues" class="page">
+      <div class="page-title">Issues Tracker</div>
+      <div class="page-sub">Log and track Go-Live issues. Generate a full report at the end.</div>
+
+      <div style="display:flex;gap:12px;margin-bottom:20px;align-items:center;flex-wrap:wrap;">
+        <select id="issues-golive-filter" onchange="loadIssues()" style="max-width:280px;">
+          <option value="">All Go-Lives</option>
+        </select>
+        <button class="btn btn-orange btn-sm" onclick="openModal('modal-new-issue')">+ Log Issue</button>
+        <button class="btn btn-ghost btn-sm" onclick="generateReport()" style="margin-left:auto;">📋 Generate Report</button>
+      </div>
+
+      <div id="issues-alert" class="alert"></div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+        <button class="btn btn-ghost btn-sm issue-filter-btn active" onclick="filterIssues('all',this)">All</button>
+        <button class="btn btn-ghost btn-sm issue-filter-btn" onclick="filterIssues('open',this)" style="color:#FF3B5C;border-color:#FF3B5C;">Open</button>
+        <button class="btn btn-ghost btn-sm issue-filter-btn" onclick="filterIssues('in-progress',this)" style="color:#FFB800;border-color:#FFB800;">In Progress</button>
+        <button class="btn btn-ghost btn-sm issue-filter-btn" onclick="filterIssues('resolved',this)" style="color:#00E096;border-color:#00E096;">Resolved</button>
+      </div>
+
+      <div id="issues-list"><p style="color:var(--muted);font-size:13px;">Loading...</p></div>
+
+      <!-- Report output -->
+      <div id="report-section" style="display:none;margin-top:32px;">
+        <hr>
+        <div class="page-title" style="font-size:18px;margin-bottom:16px;">📋 Go-Live Issue Report</div>
+        <div id="report-content"></div>
+      </div>
     </div>
 
     <!-- ── TEAM ── -->
@@ -518,6 +615,93 @@
   </div>
 </div>
 
+<!-- New Issue Modal -->
+<div class="modal-overlay" id="modal-new-issue">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-title">🚨 Log Issue</div>
+    <div id="new-issue-alert" class="alert"></div>
+    <div class="form-group">
+      <label>Issue Title</label>
+      <input type="text" id="issue-title" placeholder="e.g. Cadence scheduling not saving appointments" />
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="issue-desc" placeholder="What happened? What did the user try? Any error messages?"></textarea>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Go-Live Event</label>
+        <select id="issue-golive"></select>
+      </div>
+      <div class="form-group">
+        <label>Severity</label>
+        <select id="issue-severity">
+          <option value="low">🟢 Low — Minor inconvenience</option>
+          <option value="medium" selected>🟡 Medium — Workflow disruption</option>
+          <option value="high">🟠 High — Significant impact</option>
+          <option value="critical">🔴 Critical — Patient safety / system down</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Module</label>
+        <select id="issue-module">
+          <option value="">General / Unknown</option>
+          <optgroup label="Patient Access"><option>Prelude</option><option>Grand Central</option><option>Cadence</option><option>Welcome</option></optgroup>
+          <optgroup label="Clinical Core"><option>EpicCare Ambulatory</option><option>EpicCare Inpatient</option><option>ASAP</option><option>ClinDoc</option><option>Haiku / Canto / Rover</option></optgroup>
+          <optgroup label="Perioperative"><option>OpTime</option><option>Anesthesia</option><option>Stork</option><option>Bones</option><option>Beacon</option><option>Cupid</option></optgroup>
+          <optgroup label="Ancillary"><option>Beaker</option><option>Radiant</option><option>Willow</option><option>Bugsy</option></optgroup>
+          <optgroup label="Revenue Cycle"><option>Resolute HB</option><option>Resolute PB</option><option>Tapestry</option></optgroup>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Department</label>
+        <input type="text" id="issue-dept" placeholder="e.g. ICU, ED, Pharmacy" />
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-new-issue')">Cancel</button>
+      <button class="btn btn-danger" onclick="submitIssue()">🚨 Log Issue</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Issue Modal -->
+<div class="modal-overlay" id="modal-edit-issue">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-title">Edit Issue</div>
+    <input type="hidden" id="edit-issue-id" />
+    <div id="edit-issue-alert" class="alert"></div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="edit-issue-status">
+        <option value="open">🔴 Open</option>
+        <option value="in-progress">🟡 In Progress</option>
+        <option value="resolved">✅ Resolved</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Escalation Tier</label>
+      <select id="edit-issue-tier">
+        <option value="">None / Tier 1</option>
+        <option value="Tier 2">Tier 2 — Command Center</option>
+        <option value="Tier 3">Tier 3 — Vendor Support</option>
+        <option value="Tier 4">Tier 4 — Epic Backend</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Resolution Notes</label>
+      <textarea id="edit-issue-resolution" placeholder="How was this resolved?"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-issue')">Cancel</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteIssueById()" style="margin-right:auto;">Delete</button>
+      <button class="btn btn-primary" onclick="submitEditIssue()">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // ─── State ────────────────────────────────────────────────────────────────
   let API = window.location.origin;
@@ -622,6 +806,8 @@
     if (name === 'golives') renderGoLives();
     if (name === 'upload') renderUploadPage();
     if (name === 'team') renderTeam();
+    if (name === 'links') loadLinks();
+    if (name === 'issues') { populateIssueGoLiveDropdowns(); loadIssues(); }
   }
 
   // ─── Data loading ─────────────────────────────────────────────────────────
@@ -951,6 +1137,213 @@
     const sel = document.getElementById('upload-golive-select');
     if (sel) sel.addEventListener('change', loadIngestedDocs);
   });
+
+  // ─── Links Library ────────────────────────────────────────────────────────
+  async function submitLink() {
+    const url = document.getElementById('link-url').value.trim();
+    const desc = document.getElementById('link-desc').value.trim();
+    const moduleTag = document.getElementById('link-module').value;
+    if (!url) return showAlert('links-alert', 'Please enter a URL.', 'error');
+    try {
+      await api('POST', '/api/links/ingest', { url, description: desc, moduleTag });
+      document.getElementById('link-url').value = '';
+      document.getElementById('link-desc').value = '';
+      showAlert('links-alert', '✅ Link queued for indexing — refresh in a moment to see status.', 'success');
+      setTimeout(loadLinks, 3000);
+    } catch (e) { showAlert('links-alert', e.message, 'error'); }
+  }
+
+  async function loadLinks() {
+    const el = document.getElementById('links-list');
+    if (!el) return;
+    try {
+      const links = await api('GET', '/api/links');
+      if (!links.length) { el.innerHTML = '<p style="color:var(--muted);font-size:13px;">No links indexed yet. Add one above.</p>'; return; }
+      el.innerHTML = links.map(l => `
+        <div class="doc-item" style="flex-wrap:wrap;gap:8px;">
+          <div style="flex:1;min-width:200px;">
+            <div class="doc-name" style="word-break:break-all;">${esc(l.description || l.url)}</div>
+            <div class="doc-meta" style="word-break:break-all;">${esc(l.url)}</div>
+            <div class="doc-meta" style="margin-top:4px;">
+              ${l.moduleTag ? `<span style="color:var(--accent);">${esc(l.moduleTag)}</span> · ` : ''}
+              ${l.chunkCount ? `${l.chunkCount} chunks` : ''}
+              ${l.error ? `<span style="color:var(--danger);">Error: ${esc(l.error)}</span>` : ''}
+            </div>
+          </div>
+          <span class="badge ${l.status === 'indexed' ? 'badge-ready' : l.status === 'error' ? 'badge-inactive' : 'badge-contributor'}">
+            ${l.status === 'indexed' ? 'INDEXED' : l.status === 'error' ? 'ERROR' : 'PENDING'}
+          </span>
+          <button class="btn btn-danger btn-sm" onclick='deleteLink("${esc(l.id)}")'>Remove</button>
+        </div>`).join('');
+    } catch { el.innerHTML = '<p style="color:var(--muted);font-size:13px;">Could not load links.</p>'; }
+  }
+
+  async function deleteLink(id) {
+    if (!confirm('Remove this link from Fellito\'s knowledge base?')) return;
+    try { await api('DELETE', `/api/links/${id}`); loadLinks(); }
+    catch (e) { alert(e.message); }
+  }
+
+  // ─── Issues Tracker ───────────────────────────────────────────────────────
+  let allIssues = [];
+  let issueStatusFilter = 'all';
+
+  async function loadIssues() {
+    const el = document.getElementById('issues-list');
+    if (!el) return;
+    const goLiveId = document.getElementById('issues-golive-filter')?.value ?? '';
+    try {
+      const params = goLiveId ? `?goLiveId=${goLiveId}` : '';
+      allIssues = await api('GET', `/api/issues${params}`);
+      renderIssues();
+    } catch { el.innerHTML = '<p style="color:var(--muted);font-size:13px;">Could not load issues.</p>'; }
+  }
+
+  function filterIssues(status, btn) {
+    issueStatusFilter = status;
+    document.querySelectorAll('.issue-filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderIssues();
+  }
+
+  function renderIssues() {
+    const el = document.getElementById('issues-list');
+    const filtered = issueStatusFilter === 'all' ? allIssues : allIssues.filter(i => i.status === issueStatusFilter);
+    if (!filtered.length) { el.innerHTML = '<p style="color:var(--muted);font-size:13px;">No issues found.</p>'; return; }
+    const severityColor = { critical: '#FF3B5C', high: '#FF8C00', medium: '#FFB800', low: '#00E096' };
+    const statusColor = { open: '#FF3B5C', 'in-progress': '#FFB800', resolved: '#00E096' };
+    const statusLabel = { open: '🔴 Open', 'in-progress': '🟡 In Progress', resolved: '✅ Resolved' };
+    el.innerHTML = filtered.map(i => `
+      <div class="card" style="border-left:3px solid ${severityColor[i.severity]||'#888'};margin-bottom:10px;cursor:pointer;" onclick='openEditIssue(${JSON.stringify(i).replace(/'/g,"&#39;")})'>
+        <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:180px;">
+            <div class="card-title">${esc(i.title)}</div>
+            <div class="card-meta" style="margin-top:4px;">${esc(i.description||'')}</div>
+            <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              ${i.module ? `<span style="font-size:11px;color:var(--accent);font-weight:700;">${esc(i.module)}</span>` : ''}
+              ${i.department ? `<span style="font-size:11px;color:var(--muted);">📍 ${esc(i.department)}</span>` : ''}
+              ${i.escalationTier ? `<span style="font-size:11px;color:var(--warning);">⬆ ${esc(i.escalationTier)}</span>` : ''}
+            </div>
+            ${i.resolution ? `<div style="margin-top:6px;font-size:12px;color:var(--success);">✓ ${esc(i.resolution)}</div>` : ''}
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <span style="font-size:11px;font-weight:700;color:${statusColor[i.status]||'#fff'}">${statusLabel[i.status]||i.status}</span><br>
+            <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">${i.severity}</span><br>
+            <span style="font-size:10px;color:var(--muted);">${new Date(i.createdAt).toLocaleDateString()}</span>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  function openEditIssue(issue) {
+    document.getElementById('edit-issue-id').value = issue.id;
+    document.getElementById('edit-issue-status').value = issue.status;
+    document.getElementById('edit-issue-tier').value = issue.escalationTier || '';
+    document.getElementById('edit-issue-resolution').value = issue.resolution || '';
+    document.getElementById('edit-issue-alert').className = 'alert';
+    openModal('modal-edit-issue');
+  }
+
+  async function submitIssue() {
+    const title = document.getElementById('issue-title').value.trim();
+    if (!title) return showAlert('new-issue-alert', 'Title is required.', 'error');
+    const body = {
+      title,
+      description: document.getElementById('issue-desc').value.trim(),
+      goLiveId: document.getElementById('issue-golive').value || null,
+      severity: document.getElementById('issue-severity').value,
+      module: document.getElementById('issue-module').value,
+      department: document.getElementById('issue-dept').value.trim(),
+    };
+    try {
+      await api('POST', '/api/issues', body);
+      closeModal('modal-new-issue');
+      document.getElementById('issue-title').value = '';
+      document.getElementById('issue-desc').value = '';
+      document.getElementById('issue-dept').value = '';
+      showAlert('issues-alert', '🚨 Issue logged.', 'success');
+      loadIssues();
+    } catch (e) { showAlert('new-issue-alert', e.message, 'error'); }
+  }
+
+  async function submitEditIssue() {
+    const id = document.getElementById('edit-issue-id').value;
+    const body = {
+      status: document.getElementById('edit-issue-status').value,
+      escalationTier: document.getElementById('edit-issue-tier').value || null,
+      resolution: document.getElementById('edit-issue-resolution').value.trim(),
+    };
+    try {
+      await api('PATCH', `/api/issues/${id}`, body);
+      closeModal('modal-edit-issue');
+      showAlert('issues-alert', 'Issue updated.', 'success');
+      loadIssues();
+    } catch (e) { showAlert('edit-issue-alert', e.message, 'error'); }
+  }
+
+  async function deleteIssueById() {
+    const id = document.getElementById('edit-issue-id').value;
+    if (!confirm('Delete this issue permanently?')) return;
+    try {
+      await api('DELETE', `/api/issues/${id}`);
+      closeModal('modal-edit-issue');
+      showAlert('issues-alert', 'Issue deleted.', 'success');
+      loadIssues();
+    } catch (e) { showAlert('edit-issue-alert', e.message, 'error'); }
+  }
+
+  async function generateReport() {
+    const goLiveId = document.getElementById('issues-golive-filter')?.value;
+    const section = document.getElementById('report-section');
+    const content = document.getElementById('report-content');
+    try {
+      const path = goLiveId ? `/api/issues/report/${goLiveId}` : '/api/issues/report/all';
+      const r = await api('GET', path);
+      const sev = r.bySeverity;
+      const glName = goLives.find(g => g.id === goLiveId)?.name || 'All Go-Lives';
+      content.innerHTML = `
+        <div class="stats-grid" style="margin-bottom:20px;">
+          <div class="stat-card"><div class="stat-value">${r.summary.total}</div><div class="stat-label">Total Issues</div></div>
+          <div class="stat-card"><div class="stat-value" style="color:#FF3B5C">${r.summary.open}</div><div class="stat-label">Open</div></div>
+          <div class="stat-card"><div class="stat-value" style="color:#FFB800">${r.summary.inProgress}</div><div class="stat-label">In Progress</div></div>
+          <div class="stat-card"><div class="stat-value" style="color:#00E096">${r.summary.resolved}</div><div class="stat-label">Resolved</div></div>
+          ${r.avgResolutionMinutes != null ? `<div class="stat-card"><div class="stat-value">${r.avgResolutionMinutes}m</div><div class="stat-label">Avg Resolution</div></div>` : ''}
+        </div>
+        <div class="grid-2" style="margin-bottom:20px;">
+          <div class="card">
+            <div class="section-label">By Severity</div>
+            ${Object.entries(sev).map(([k,v]) => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="text-transform:capitalize;">${k}</span><strong>${v}</strong></div>`).join('')}
+          </div>
+          <div class="card">
+            <div class="section-label">By Module</div>
+            ${Object.entries(r.byModule).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;"><span>${esc(k)}</span><strong>${v}</strong></div>`).join('') || '<p style="color:var(--muted);font-size:13px;">No data</p>'}
+          </div>
+        </div>
+        ${Object.keys(r.byDepartment).length ? `
+        <div class="card" style="margin-bottom:20px;">
+          <div class="section-label">By Department</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            ${Object.entries(r.byDepartment).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `<span class="badge badge-contributor">${esc(k)}: ${v}</span>`).join('')}
+          </div>
+        </div>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨 Print Report</button>
+      `;
+      section.style.display = 'block';
+      section.scrollIntoView({ behavior: 'smooth' });
+    } catch (e) { showAlert('issues-alert', 'Could not generate report: ' + e.message, 'error'); }
+  }
+
+  // Populate go-live dropdowns on issues page
+  function populateIssueGoLiveDropdowns() {
+    const filter = document.getElementById('issues-golive-filter');
+    const modal = document.getElementById('issue-golive');
+    if (filter) {
+      filter.innerHTML = '<option value="">All Go-Lives</option>' + goLives.map(g => `<option value="${esc(g.id)}">${esc(g.name)}</option>`).join('');
+    }
+    if (modal) {
+      modal.innerHTML = '<option value="">— None / General —</option>' + goLives.map(g => `<option value="${esc(g.id)}">${esc(g.name)}</option>`).join('');
+    }
+  }
 </script>
 </body>
 </html>

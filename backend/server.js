@@ -11,6 +11,8 @@ const { ingestDocument, queryDocuments, listDocuments, deleteDocument } = requir
 const { bootstrapOwner, login, inviteContributor, listTeam, updateTeamMember, deleteTeamMember, getUserById } = require('./authEngine');
 const { requireAuth, requireOwner } = require('./authMiddleware');
 const { listGoLives, createGoLive, updateGoLive, deleteGoLive } = require('./goLiveStore');
+const { listIssues, createIssue, updateIssue, deleteIssue, generateReport } = require('./issuesStore');
+const { listLinks, ingestLink, deleteLink } = require('./linksEngine');
 
 const app = express();
 const PORT = process.env.BACKEND_PORT ?? 3001;
@@ -208,6 +210,56 @@ app.delete('/api/rag/docs/:docId', requireAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// ─── Links Library ────────────────────────────────────────────────────────────
+app.get('/api/links', requireAuth, (_req, res) => res.json(listLinks()));
+
+app.post('/api/links/ingest', requireOwner, async (req, res) => {
+  const { url, description, moduleTag } = req.body;
+  if (!url) return res.status(400).json({ error: 'url required' });
+  try {
+    // Kick off async ingestion — return immediately so UI doesn't time out on slow pages
+    res.json({ queued: true, message: 'Fetching and indexing URL in background...' });
+    ingestLink(url, description, moduleTag, ingestDocument).catch((err) => {
+      console.error('[Links] Ingest error:', err.message);
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/links/:id', requireOwner, (req, res) => {
+  try { deleteLink(req.params.id); res.json({ ok: true }); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+// ─── Issues Tracker ───────────────────────────────────────────────────────────
+app.get('/api/issues', requireAuth, (req, res) => {
+  res.json(listIssues(req.query.goLiveId));
+});
+
+app.post('/api/issues', requireAuth, (req, res) => {
+  const { goLiveId, title, description, module, department, severity } = req.body;
+  if (!title) return res.status(400).json({ error: 'title required' });
+  try {
+    const issue = createIssue({ goLiveId, title, description, module, department, severity, reportedBy: req.user.email });
+    res.json(issue);
+  } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+app.patch('/api/issues/:id', requireAuth, (req, res) => {
+  try { res.json(updateIssue(req.params.id, req.body)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+app.delete('/api/issues/:id', requireOwner, (req, res) => {
+  try { deleteIssue(req.params.id); res.json({ ok: true }); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+app.get('/api/issues/report/:goLiveId', requireAuth, (req, res) => {
+  res.json(generateReport(req.params.goLiveId));
 });
 
 // ─── Health ───────────────────────────────────────────────────────────────────
