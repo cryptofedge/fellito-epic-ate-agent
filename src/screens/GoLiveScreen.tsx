@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/navigation/RootNavigator';
 import { useAppStore, ChatMessage } from '@/store/appStore';
+import { analyzeMessage, saveStyleProfile, loadStyleProfile } from '@/services/styleProfileService';
 import { BRANDING } from '@/constants/persona';
 import { EPIC_MODULES } from '@/constants/modules';
 import { DEPARTMENT_GROUPS, ALL_DEPARTMENTS } from '@/constants/departments';
@@ -27,7 +28,13 @@ export default function GoLiveScreen({ navigation }: Props) {
     setActiveModule, setActiveDepartment, addMessage, endGoLive,
     isVoiceMode, setVoiceMode, isFellitoSpeaking,
     creatorOverrides, addCreatorOverride,
+    styleProfile, setStyleProfile,
   } = useAppStore();
+
+  // Load persisted style profile on mount
+  useEffect(() => {
+    loadStyleProfile().then((p) => setStyleProfile(p));
+  }, []);
 
   const isCreator = authUser?.role === 'owner';
   const [showDeptPicker, setShowDeptPicker] = useState(false);
@@ -83,6 +90,17 @@ export default function GoLiveScreen({ navigation }: Props) {
     };
     addMessage(userMsg);
 
+    // Analyze message and evolve the style profile in the background
+    const currentProfile = useAppStore.getState().styleProfile;
+    const updatedProfile = analyzeMessage(
+      currentProfile,
+      text,
+      activeModule,
+      activeDepartment
+    );
+    setStyleProfile(updatedProfile);
+    saveStyleProfile(updatedProfile); // persist async, don't await
+
     try {
       const result = await askFellito(
         text,
@@ -92,7 +110,8 @@ export default function GoLiveScreen({ navigation }: Props) {
         isCreator,
         creatorOverrides,
         consultantProfile?.preferredLanguage ?? 'en',
-        activeDepartment
+        activeDepartment,
+        updatedProfile
       );
 
       // If creator sent an override command, store it for future messages

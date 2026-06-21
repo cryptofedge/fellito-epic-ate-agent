@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { AuthUser } from '@/services/authService';
+import { StyleProfile } from '../services/styleProfileService';
 
 export interface ConsultantProfile {
   name: string;
@@ -96,6 +97,7 @@ interface AppState {
   isFellitoSpeaking: boolean;
   creatorOverrides: string[];
   tickets: CCTicket[];
+  styleProfile: StyleProfile | null;
 
   setAuthUser: (user: AuthUser | null) => void;
   setConsultantProfile: (profile: ConsultantProfile) => void;
@@ -115,6 +117,7 @@ interface AppState {
   updateTicket: (id: string, updates: Partial<CCTicket>) => void;
   addTicketUpdate: (ticketId: string, note: string, author: string) => void;
   deleteTicket: (id: string) => void;
+  setStyleProfile: (profile: StyleProfile) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -131,6 +134,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   isFellitoSpeaking: false,
   creatorOverrides: [],
   tickets: [],
+  styleProfile: null,
 
   setAuthUser: (user) => set({ authUser: user }),
   setConsultantProfile: (profile) => set({ consultantProfile: profile }),
@@ -213,4 +217,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   deleteTicket: (id) =>
     set((s) => ({ tickets: s.tickets.filter((t) => t.id !== id) })),
+
+  setStyleProfile: (profile) => set({ styleProfile: profile }),
 }));

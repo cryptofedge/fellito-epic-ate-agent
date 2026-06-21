@@ -1,7 +1,9 @@
 import { FELLITO_SYSTEM_PROMPT } from '@/constants/persona';
 import { ChatMessage } from '@/store/appStore';
+import { StyleProfile } from './styleProfileService';
 import { ragService } from './ragService';
 import { authHeaders } from './authService';
+import { buildStyleDnaBlock } from './styleProfileService';
 
 const MODEL = 'claude-sonnet-4-6';
 
@@ -21,12 +23,13 @@ export async function askFellito(
   isCreator = false,
   creatorOverrides: string[] = [],
   preferredLanguage = 'en',
-  activeDepartment = ''
+  activeDepartment = '',
+  styleProfile: StyleProfile | null = null
 ): Promise<FellitoResponse> {
   // Retrieve relevant orientation doc context from RAG
   const ragContext = await ragService.query(userMessage, sessionId);
 
-  const systemPrompt = buildSystemPrompt(activeModule, ragContext, isCreator, creatorOverrides, preferredLanguage, activeDepartment);
+  const systemPrompt = buildSystemPrompt(activeModule, ragContext, isCreator, creatorOverrides, preferredLanguage, activeDepartment, styleProfile);
 
   // Map history to Anthropic message format
   const messages: { role: 'user' | 'assistant'; content: string }[] = history
@@ -81,7 +84,8 @@ function buildSystemPrompt(
   isCreator = false,
   creatorOverrides: string[] = [],
   preferredLanguage = 'en',
-  activeDepartment = ''
+  activeDepartment = '',
+  styleProfile: StyleProfile | null = null
 ): string {
   let prompt = FELLITO_SYSTEM_PROMPT;
 
@@ -127,6 +131,12 @@ CURRENT CONTEXT: Consultant is supporting the ${activeModule} module${deptLine}.
     prompt += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 CURRENT CONTEXT: Consultant is supporting the ${activeDepartment} department. Tailor your answer to workflows and Epic usage patterns common to ${activeDepartment} staff.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+  }
+
+  // Style DNA — injected before RAG so it's fresh in the context window
+  if (styleProfile) {
+    const dnaBlock = buildStyleDnaBlock(styleProfile);
+    if (dnaBlock) prompt += dnaBlock;
   }
 
   if (ragContext) {
