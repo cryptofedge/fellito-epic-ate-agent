@@ -13,6 +13,7 @@ import GoLiveScreen from '@/screens/GoLiveScreen';
 import OrientationUploadScreen from '@/screens/OrientationUploadScreen';
 import EscalationScreen from '@/screens/EscalationScreen';
 import SessionLogScreen from '@/screens/SessionLogScreen';
+import TicketTrackerScreen from '@/screens/TicketTrackerScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -22,6 +23,7 @@ export type RootStackParamList = {
   OrientationUpload: undefined;
   Escalation: { issueSummary?: string };
   SessionLog: undefined;
+  TicketTracker: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -78,6 +80,7 @@ export default function RootNavigator() {
             <Stack.Screen name="OrientationUpload" component={OrientationUploadScreen} />
             <Stack.Screen name="Escalation" component={EscalationScreen} />
             <Stack.Screen name="SessionLog" component={SessionLogScreen} />
+            <Stack.Screen name="TicketTracker" component={TicketTrackerScreen} />
           </>
         )}
       </Stack.Navigator>

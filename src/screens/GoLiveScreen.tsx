@@ -193,6 +193,12 @@ export default function GoLiveScreen({ navigation }: Props) {
           >
             <Text style={styles.iconBtnText}>📋</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => navigation.navigate('TicketTracker')}
+          >
+            <Text style={styles.iconBtnText}>🎫</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.endBtn} onPress={handleEndGoLive}>
             <Text style={styles.endBtnText}>END</Text>
           </TouchableOpacity>

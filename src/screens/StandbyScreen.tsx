@@ -177,6 +177,12 @@ export default function StandbyScreen({ navigation }: Props) {
               <Text style={styles.quickLinkText}>📋 Session Log ({pastSessions.length})</Text>
             </TouchableOpacity>
           )}
+          <TouchableOpacity
+            style={styles.quickLink}
+            onPress={() => navigation.navigate('TicketTracker')}
+          >
+            <Text style={styles.quickLinkText}>🎫 CC Ticket Tracker</Text>
+          </TouchableOpacity>
         </View>
 
         <Text style={styles.disclaimer}>
