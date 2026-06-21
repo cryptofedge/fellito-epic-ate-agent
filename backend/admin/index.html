@@ -274,7 +274,53 @@
         </div>
         <div class="form-group">
           <label>Module Tag (optional)</label>
-          <input type="text" id="upload-module-tag" placeholder="e.g. Cadence, Willow, Stork" />
+          <select id="upload-module-tag">
+            <option value="">All Modules</option>
+            <optgroup label="Patient Access &amp; Scheduling">
+              <option value="Prelude">Prelude (Registration/ADT)</option>
+              <option value="Grand Central">Grand Central (Bed Management)</option>
+              <option value="Cadence">Cadence (Scheduling)</option>
+              <option value="Welcome">Welcome (Kiosk)</option>
+            </optgroup>
+            <optgroup label="Clinical Core">
+              <option value="EpicCare Ambulatory">EpicCare Ambulatory</option>
+              <option value="EpicCare Inpatient">EpicCare Inpatient</option>
+              <option value="ASAP">ASAP (Emergency)</option>
+              <option value="ClinDoc">ClinDoc (Nursing)</option>
+              <option value="Haiku / Canto / Rover">Haiku / Canto / Rover (Mobile)</option>
+            </optgroup>
+            <optgroup label="Perioperative &amp; Specialty">
+              <option value="OpTime">OpTime (Surgery)</option>
+              <option value="Anesthesia">Anesthesia</option>
+              <option value="Stork">Stork (OB)</option>
+              <option value="Bones">Bones (Ortho)</option>
+              <option value="Beacon">Beacon (Oncology)</option>
+              <option value="Cupid">Cupid (Cardiology)</option>
+              <option value="Kaleidoscope">Kaleidoscope (Ophthalmology)</option>
+              <option value="Wisdom">Wisdom (Dental)</option>
+            </optgroup>
+            <optgroup label="Ancillary">
+              <option value="Beaker">Beaker (Lab)</option>
+              <option value="Radiant">Radiant (Radiology)</option>
+              <option value="Willow">Willow (Pharmacy)</option>
+              <option value="Bugsy">Bugsy (Infection Control)</option>
+            </optgroup>
+            <optgroup label="Revenue Cycle">
+              <option value="Resolute HB">Resolute HB (Hospital Billing)</option>
+              <option value="Resolute PB">Resolute PB (Professional Billing)</option>
+              <option value="Tapestry">Tapestry (Managed Care)</option>
+            </optgroup>
+            <optgroup label="Interop &amp; Data">
+              <option value="Bridges">Bridges (Interfaces)</option>
+              <option value="Care Everywhere">Care Everywhere</option>
+              <option value="Clarity / Caboodle / Cogito">Clarity / Caboodle / Cogito</option>
+            </optgroup>
+            <optgroup label="Patient-Facing">
+              <option value="MyChart">MyChart</option>
+              <option value="Healthy Planet">Healthy Planet</option>
+              <option value="Cheers">Cheers (CRM)</option>
+            </optgroup>
+          </select>
         </div>
       </div>
 
@@ -355,8 +401,50 @@
       </div>
     </div>
     <div class="form-group">
-      <label>Modules (comma-separated)</label>
-      <input type="text" id="gl-modules" placeholder="e.g. Cadence, Willow, Stork, OpTime" />
+      <label>Modules Covered</label>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;" id="gl-modules-list">
+        <label style="font-size:12px;color:var(--accent);font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="gl-mod-all" style="width:auto;accent-color:var(--orange);" onchange="toggleAllModules(this)" /> All Modules
+        </label>
+        <hr style="border-color:var(--border);margin:4px 0;">
+        <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px;">Patient Access &amp; Scheduling</div>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Prelude" style="width:auto;accent-color:var(--accent);"> Prelude (Registration/ADT)</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Grand Central" style="width:auto;accent-color:var(--accent);"> Grand Central (Bed Management)</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Cadence" style="width:auto;accent-color:var(--accent);"> Cadence (Scheduling)</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Welcome" style="width:auto;accent-color:var(--accent);"> Welcome (Kiosk)</label>
+        <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:6px;">Clinical Core</div>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="EpicCare Ambulatory" style="width:auto;accent-color:var(--accent);"> EpicCare Ambulatory</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="EpicCare Inpatient" style="width:auto;accent-color:var(--accent);"> EpicCare Inpatient</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="ASAP" style="width:auto;accent-color:var(--accent);"> ASAP (Emergency)</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="ClinDoc" style="width:auto;accent-color:var(--accent);"> ClinDoc (Nursing)</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Haiku / Canto / Rover" style="width:auto;accent-color:var(--accent);"> Haiku / Canto / Rover (Mobile)</label>
+        <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:6px;">Perioperative &amp; Specialty</div>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="OpTime" style="width:auto;accent-color:var(--accent);"> OpTime (Surgery)</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Anesthesia" style="width:auto;accent-color:var(--accent);"> Anesthesia</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Stork" style="width:auto;accent-color:var(--accent);"> Stork (OB)</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Bones" style="width:auto;accent-color:var(--accent);"> Bones (Ortho)</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Beacon" style="width:auto;accent-color:var(--accent);"> Beacon (Oncology)</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Cupid" style="width:auto;accent-color:var(--accent);"> Cupid (Cardiology)</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Kaleidoscope" style="width:auto;accent-color:var(--accent);"> Kaleidoscope (Ophthalmology)</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Wisdom" style="width:auto;accent-color:var(--accent);"> Wisdom (Dental)</label>
+        <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:6px;">Ancillary</div>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Beaker" style="width:auto;accent-color:var(--accent);"> Beaker (Lab)</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Radiant" style="width:auto;accent-color:var(--accent);"> Radiant (Radiology)</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Willow" style="width:auto;accent-color:var(--accent);"> Willow (Pharmacy)</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Bugsy" style="width:auto;accent-color:var(--accent);"> Bugsy (Infection Control)</label>
+        <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:6px;">Revenue Cycle</div>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Resolute HB" style="width:auto;accent-color:var(--accent);"> Resolute HB (Hospital Billing)</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Resolute PB" style="width:auto;accent-color:var(--accent);"> Resolute PB (Professional Billing)</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Tapestry" style="width:auto;accent-color:var(--accent);"> Tapestry (Managed Care)</label>
+        <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:6px;">Interop &amp; Data</div>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Bridges" style="width:auto;accent-color:var(--accent);"> Bridges (Interfaces)</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Care Everywhere" style="width:auto;accent-color:var(--accent);"> Care Everywhere</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Clarity / Caboodle / Cogito" style="width:auto;accent-color:var(--accent);"> Clarity / Caboodle / Cogito</label>
+        <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:6px;">Patient-Facing</div>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="MyChart" style="width:auto;accent-color:var(--accent);"> MyChart</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Healthy Planet" style="width:auto;accent-color:var(--accent);"> Healthy Planet</label>
+        <label style="font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;padding-left:8px;"><input type="checkbox" class="gl-mod" value="Cheers" style="width:auto;accent-color:var(--accent);"> Cheers (CRM)</label>
+      </div>
     </div>
     <div id="gl-alert" class="alert"></div>
     <div class="modal-actions">
@@ -589,11 +677,15 @@
       </div>`;
   }
 
+  function toggleAllModules(cb) {
+    document.querySelectorAll('.gl-mod').forEach(c => { c.checked = cb.checked; c.disabled = cb.checked; });
+  }
+
   function openCreateGoLive() {
     document.getElementById('gl-name').value = '';
     document.getElementById('gl-start').value = '';
     document.getElementById('gl-end').value = '';
-    document.getElementById('gl-modules').value = '';
+    document.querySelectorAll('.gl-mod, #gl-mod-all').forEach(c => c.checked = false);
     hideAlert('gl-alert');
     openModal('modal-golive');
   }
@@ -602,7 +694,10 @@
     const name = document.getElementById('gl-name').value.trim();
     const startDate = document.getElementById('gl-start').value;
     const endDate = document.getElementById('gl-end').value;
-    const modules = document.getElementById('gl-modules').value.split(',').map(s=>s.trim()).filter(Boolean);
+    const allChecked = document.getElementById('gl-mod-all').checked;
+    const modules = allChecked
+      ? ['All Modules']
+      : [...document.querySelectorAll('.gl-mod:checked')].map(c => c.value);
     if (!name || !startDate) return showAlert('gl-alert', 'Name and start date are required.', 'error');
     try {
       await api('POST', '/api/golives', { name, startDate, endDate, modules });
