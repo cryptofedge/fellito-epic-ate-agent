@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -26,8 +26,14 @@ export default function StandbyScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.logo}>FELLITO</Text>
-        <Text style={styles.powered}>{BRANDING.poweredBy}</Text>
+        <View style={styles.headerRow}>
+          <Image source={require('../assets/logo.png')} style={styles.logoImg} resizeMode="contain" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.logo}>FELLITO</Text>
+            <Text style={styles.powered}>{BRANDING.poweredBy}</Text>
+          </View>
+          <Image source={require('../assets/fellito-avatar.png')} style={styles.avatarImg} resizeMode="cover" />
+        </View>
 
         <View style={styles.statusBadge}>
           <View style={styles.dormantDot} />
@@ -92,8 +98,11 @@ export default function StandbyScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: BRANDING.bgColor },
   scroll: { padding: 24, paddingBottom: 48 },
-  logo: { fontSize: 36, fontWeight: '900', color: BRANDING.accentColor, letterSpacing: 6 },
-  powered: { fontSize: 11, color: BRANDING.textSecondary, marginBottom: 24 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24 },
+  logoImg: { width: 36, height: 44 },
+  avatarImg: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: BRANDING.accentColor },
+  logo: { fontSize: 30, fontWeight: '900', color: BRANDING.accentColor, letterSpacing: 5 },
+  powered: { fontSize: 11, color: BRANDING.textSecondary },
   statusBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: BRANDING.cardColor, borderRadius: 8,

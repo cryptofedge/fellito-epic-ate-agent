@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
-  StyleSheet, KeyboardAvoidingView, Platform, Alert,
+  StyleSheet, KeyboardAvoidingView, Platform, Alert, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -140,11 +140,14 @@ export default function GoLiveScreen({ navigation }: Props) {
     <SafeAreaView style={styles.safe}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>FELLITO</Text>
-          <View style={styles.liveBadge}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveText}>GO-LIVE ACTIVE</Text>
+        <View style={styles.headerLeft}>
+          <Image source={require('../assets/fellito-avatar.png')} style={styles.headerAvatar} resizeMode="cover" />
+          <View>
+            <Text style={styles.headerTitle}>FELLITO</Text>
+            <View style={styles.liveBadge}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>GO-LIVE ACTIVE</Text>
+            </View>
           </View>
         </View>
         <View style={styles.headerActions}>
@@ -265,7 +268,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12,
     borderBottomWidth: 1, borderBottomColor: BRANDING.borderColor,
   },
-  headerTitle: { fontSize: 22, fontWeight: '900', color: BRANDING.accentColor, letterSpacing: 4 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerAvatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: BRANDING.accentColor },
+  headerTitle: { fontSize: 20, fontWeight: '900', color: BRANDING.accentColor, letterSpacing: 4 },
   liveBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#00E096' },
   liveText: { fontSize: 10, fontWeight: '700', color: '#00E096', letterSpacing: 1.5 },
