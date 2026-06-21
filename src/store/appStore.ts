@@ -65,6 +65,7 @@ interface AppState {
   orientationDocs: OrientationDoc[];
   phiAuditLog: PhiAuditEntry[];
   activeModule: string;
+  activeDepartment: string;
   isVoiceMode: boolean;
   isFellitoSpeaking: boolean;
   creatorOverrides: string[];
@@ -75,6 +76,7 @@ interface AppState {
   endGoLive: () => void;
   addMessage: (msg: ChatMessage) => void;
   setActiveModule: (mod: string) => void;
+  setActiveDepartment: (dept: string) => void;
   addOrientationDoc: (doc: OrientationDoc) => void;
   logPhiAudit: (entry: PhiAuditEntry) => void;
   setVoiceMode: (on: boolean) => void;
@@ -93,6 +95,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   orientationDocs: [],
   phiAuditLog: [],
   activeModule: 'General',
+  activeDepartment: '',
   isVoiceMode: false,
   isFellitoSpeaking: false,
   creatorOverrides: [],
@@ -135,6 +138,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }),
 
   setActiveModule: (mod) => set({ activeModule: mod }),
+  setActiveDepartment: (dept) => set({ activeDepartment: dept }),
 
   addOrientationDoc: (doc) =>
     set((s) => ({ orientationDocs: [...s.orientationDocs, doc] })),

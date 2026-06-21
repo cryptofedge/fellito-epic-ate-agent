@@ -20,12 +20,13 @@ export async function askFellito(
   sessionId: string,
   isCreator = false,
   creatorOverrides: string[] = [],
-  preferredLanguage = 'en'
+  preferredLanguage = 'en',
+  activeDepartment = ''
 ): Promise<FellitoResponse> {
   // Retrieve relevant orientation doc context from RAG
   const ragContext = await ragService.query(userMessage, sessionId);
 
-  const systemPrompt = buildSystemPrompt(activeModule, ragContext, isCreator, creatorOverrides, preferredLanguage);
+  const systemPrompt = buildSystemPrompt(activeModule, ragContext, isCreator, creatorOverrides, preferredLanguage, activeDepartment);
 
   // Map history to Anthropic message format
   const messages: Anthropic.MessageParam[] = history
@@ -79,7 +80,8 @@ function buildSystemPrompt(
   ragContext: string,
   isCreator = false,
   creatorOverrides: string[] = [],
-  preferredLanguage = 'en'
+  preferredLanguage = 'en',
+  activeDepartment = ''
 ): string {
   let prompt = FELLITO_SYSTEM_PROMPT;
 
@@ -117,8 +119,13 @@ ${creatorOverrides.map((o, i) => `${i + 1}. ${o}`).join('\n')}
   }
 
   if (activeModule && activeModule !== 'General') {
+    const deptLine = activeDepartment ? ` in the ${activeDepartment} department` : '';
     prompt += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CURRENT CONTEXT: Consultant is asking about the ${activeModule} module. Prioritize ${activeModule}-specific knowledge in your response.
+CURRENT CONTEXT: Consultant is supporting the ${activeModule} module${deptLine}. Tailor your answer to ${activeModule} workflows${activeDepartment ? ` as they apply specifically to ${activeDepartment} staff and processes` : ''}.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+  } else if (activeDepartment) {
+    prompt += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CURRENT CONTEXT: Consultant is supporting the ${activeDepartment} department. Tailor your answer to workflows and Epic usage patterns common to ${activeDepartment} staff.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
   }
 

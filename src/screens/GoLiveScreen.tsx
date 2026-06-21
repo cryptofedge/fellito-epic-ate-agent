@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   StyleSheet, KeyboardAvoidingView, Platform, Alert, Image,
+  Modal, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -9,6 +10,7 @@ import { RootStackParamList } from '@/navigation/RootNavigator';
 import { useAppStore, ChatMessage } from '@/store/appStore';
 import { BRANDING } from '@/constants/persona';
 import { EPIC_MODULES } from '@/constants/modules';
+import { DEPARTMENT_GROUPS, ALL_DEPARTMENTS } from '@/constants/departments';
 import { askFellito } from '@/services/anthropicService';
 import { speakAsFellito, stopFellitoVoice } from '@/services/elevenLabsService';
 import { scanForPhi, logPhiWarningShown } from '@/services/phiGuard';
@@ -21,13 +23,17 @@ type Props = NativeStackScreenProps<RootStackParamList, 'GoLive'>;
 
 export default function GoLiveScreen({ navigation }: Props) {
   const {
-    consultantProfile, activeSession, activeModule, authUser,
-    setActiveModule, addMessage, endGoLive,
+    consultantProfile, activeSession, activeModule, activeDepartment, authUser,
+    setActiveModule, setActiveDepartment, addMessage, endGoLive,
     isVoiceMode, setVoiceMode, isFellitoSpeaking,
     creatorOverrides, addCreatorOverride,
   } = useAppStore();
 
   const isCreator = authUser?.role === 'owner';
+  const [showDeptPicker, setShowDeptPicker] = useState(false);
+  const selectedDeptLabel = activeDepartment
+    ? ALL_DEPARTMENTS.find((d) => d.id === activeDepartment)?.name ?? activeDepartment
+    : 'Select Department';
 
   // Stop wake word listener when GoLive is active — mic is in use
   useEffect(() => {
@@ -85,7 +91,8 @@ export default function GoLiveScreen({ navigation }: Props) {
         activeSession?.id ?? '',
         isCreator,
         creatorOverrides,
-        consultantProfile?.preferredLanguage ?? 'en'
+        consultantProfile?.preferredLanguage ?? 'en',
+        activeDepartment
       );
 
       // If creator sent an override command, store it for future messages
@@ -198,6 +205,53 @@ export default function GoLiveScreen({ navigation }: Props) {
         activeModule={activeModule}
         onSelect={setActiveModule}
       />
+
+      {/* Department Picker */}
+      <TouchableOpacity style={styles.deptBar} onPress={() => setShowDeptPicker(true)}>
+        <Text style={styles.deptBarLabel}>DEPT</Text>
+        <Text style={[styles.deptBarValue, !activeDepartment && styles.deptBarPlaceholder]} numberOfLines={1}>
+          {selectedDeptLabel}
+        </Text>
+        <Text style={styles.deptBarChevron}>▾</Text>
+      </TouchableOpacity>
+
+      {/* Department picker modal */}
+      <Modal visible={showDeptPicker} animationType="slide" transparent>
+        <View style={styles.deptModalOverlay}>
+          <View style={styles.deptModal}>
+            <View style={styles.deptModalHeader}>
+              <Text style={styles.deptModalTitle}>Select Department</Text>
+              <TouchableOpacity onPress={() => setShowDeptPicker(false)}>
+                <Text style={styles.deptModalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            {activeDepartment ? (
+              <TouchableOpacity style={styles.deptClearBtn} onPress={() => { setActiveDepartment(''); setShowDeptPicker(false); }}>
+                <Text style={styles.deptClearText}>✕ Clear selection</Text>
+              </TouchableOpacity>
+            ) : null}
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {DEPARTMENT_GROUPS.map(({ category, departments }) => (
+                <View key={category}>
+                  <Text style={styles.deptCategory}>{category}</Text>
+                  {departments.map((dept) => (
+                    <TouchableOpacity
+                      key={dept.id}
+                      style={[styles.deptOption, activeDepartment === dept.id && styles.deptOptionActive]}
+                      onPress={() => { setActiveDepartment(dept.id); setShowDeptPicker(false); }}
+                    >
+                      <Text style={[styles.deptOptionText, activeDepartment === dept.id && styles.deptOptionTextActive]}>
+                        {dept.name}
+                      </Text>
+                      {activeDepartment === dept.id && <Text style={styles.deptCheck}>✓</Text>}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Chat */}
       <KeyboardAvoidingView
@@ -346,4 +400,45 @@ const styles = StyleSheet.create({
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, marginTop: 80 },
   emptyTitle: { fontSize: 20, fontWeight: '800', color: BRANDING.textPrimary, marginBottom: 8 },
   emptySub: { fontSize: 14, color: BRANDING.textSecondary, textAlign: 'center', lineHeight: 20 },
+  // Department bar
+  deptBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 16, paddingVertical: 9,
+    backgroundColor: '#0d0d16',
+    borderBottomWidth: 1, borderBottomColor: BRANDING.borderColor,
+  },
+  deptBarLabel: { fontSize: 9, fontWeight: '800', color: BRANDING.accentColor, letterSpacing: 1.5, minWidth: 32 },
+  deptBarValue: { flex: 1, fontSize: 13, fontWeight: '600', color: BRANDING.textPrimary },
+  deptBarPlaceholder: { color: BRANDING.textSecondary },
+  deptBarChevron: { fontSize: 13, color: BRANDING.textSecondary },
+  // Department modal
+  deptModalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end',
+  },
+  deptModal: {
+    backgroundColor: BRANDING.cardColor, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    maxHeight: '80%', paddingBottom: 32,
+  },
+  deptModalHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: 20, borderBottomWidth: 1, borderBottomColor: BRANDING.borderColor,
+  },
+  deptModalTitle: { fontSize: 17, fontWeight: '800', color: BRANDING.textPrimary },
+  deptModalClose: { fontSize: 18, color: BRANDING.textSecondary, padding: 4 },
+  deptClearBtn: { margin: 12, paddingVertical: 8, paddingHorizontal: 14, alignSelf: 'flex-start' },
+  deptClearText: { fontSize: 13, color: BRANDING.dangerColor, fontWeight: '600' },
+  deptCategory: {
+    fontSize: 10, fontWeight: '800', color: BRANDING.accentColor,
+    letterSpacing: 1.5, paddingHorizontal: 16, paddingTop: 18, paddingBottom: 6,
+    textTransform: 'uppercase',
+  },
+  deptOption: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 20, paddingVertical: 13,
+    borderBottomWidth: 1, borderBottomColor: '#1a1a28',
+  },
+  deptOptionActive: { backgroundColor: '#0d2a30' },
+  deptOptionText: { flex: 1, fontSize: 14, color: BRANDING.textPrimary },
+  deptOptionTextActive: { color: BRANDING.accentColor, fontWeight: '700' },
+  deptCheck: { fontSize: 14, color: BRANDING.accentColor, fontWeight: '800' },
 });
