@@ -66,12 +66,25 @@ async function bootstrapOwner() {
 }
 
 // ─── Auth operations ─────────────────────────────────────────────────────────
-async function login(email, password) {
-  const user = findUser(email);
+async function login(email, password, deviceId) {
+  const users = loadUsers();
+  const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
   if (!user || !user.active) throw new Error('Invalid credentials');
 
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) throw new Error('Invalid credentials');
+
+  // Device binding — owner is exempt (logs in from admin portal too)
+  if (user.role !== 'owner' && deviceId) {
+    if (!user.boundDeviceId) {
+      // First login — bind this device
+      const idx = users.findIndex((u) => u.id === user.id);
+      users[idx].boundDeviceId = deviceId;
+      saveUsers(users);
+    } else if (user.boundDeviceId !== deviceId) {
+      throw new Error('This account is linked to another device. Contact your administrator.');
+    }
+  }
 
   const token = jwt.sign(
     { sub: user.id, email: user.email, role: user.role },
@@ -123,7 +136,7 @@ function updateTeamMember(userId, updates) {
   const idx = users.findIndex((u) => u.id === userId);
   if (idx === -1) throw new Error('User not found');
 
-  const allowed = ['name', 'active', 'assignedGoLives'];
+  const allowed = ['name', 'active', 'assignedGoLives', 'boundDeviceId'];
   for (const key of allowed) {
     if (key in updates) users[idx][key] = updates[key];
   }

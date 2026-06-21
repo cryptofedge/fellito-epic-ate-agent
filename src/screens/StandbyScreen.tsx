@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView, Image,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Animated, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -9,11 +9,67 @@ import { useAppStore } from '@/store/appStore';
 import { BRANDING } from '@/constants/persona';
 import { EPIC_MODULES } from '@/constants/modules';
 import { logout } from '@/services/authService';
+import { wakeWordService } from '@/services/wakeWordService';
+
+// Only import native speech hooks on native platforms
+let useSpeechRecognitionEvent: any = null;
+if (Platform.OS !== 'web') {
+  try {
+    const mod = require('expo-speech-recognition');
+    useSpeechRecognitionEvent = mod.useSpeechRecognitionEvent;
+  } catch {}
+}
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Standby'>;
 
 export default function StandbyScreen({ navigation }: Props) {
   const { consultantProfile, startGoLive, pastSessions, setAuthUser, clearProfile } = useAppStore();
+  const [isListening, setIsListening] = useState(false);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const pulseLoop = useRef<Animated.CompositeAnimation | null>(null);
+
+  // Wire up native expo-speech-recognition event callbacks
+  if (useSpeechRecognitionEvent) {
+    useSpeechRecognitionEvent('result', (event: any) => {
+      const transcript = event.results?.[0]?.transcript ?? '';
+      wakeWordService.handleNativeResult(transcript);
+    });
+    useSpeechRecognitionEvent('end', () => {
+      wakeWordService.handleNativeEnd();
+    });
+    useSpeechRecognitionEvent('error', () => {
+      wakeWordService.handleNativeEnd();
+    });
+  }
+
+  useEffect(() => {
+    if (!wakeWordService.isSupported) return;
+
+    const startListening = () => {
+      setIsListening(true);
+      pulseLoop.current = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.3, duration: 900, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+        ])
+      );
+      pulseLoop.current.start();
+      wakeWordService.start(() => {
+        pulseLoop.current?.stop();
+        setIsListening(false);
+        startGoLive();
+        navigation.navigate('GoLive', {});
+      });
+    };
+
+    // Short delay so the screen is fully mounted before mic starts
+    const t = setTimeout(startListening, 800);
+    return () => {
+      clearTimeout(t);
+      wakeWordService.stop();
+      pulseLoop.current?.stop();
+    };
+  }, []);
 
   const handleSignOut = async () => {
     await logout();
@@ -47,6 +103,35 @@ export default function StandbyScreen({ navigation }: Props) {
           <View style={styles.dormantDot} />
           <Text style={styles.statusText}>STANDBY — NO ACTIVE GO-LIVE</Text>
         </View>
+
+        {/* Wake word listener indicator */}
+        {isListening && (
+          <View style={styles.wakeRow}>
+            <Animated.View style={[styles.wakePulse, { transform: [{ scale: pulseAnim }] }]} />
+            <Text style={styles.wakeText}>Listening for "Hey Fellito"...</Text>
+          </View>
+        )}
+        {!isListening && wakeWordService.isSupported && (
+          <TouchableOpacity style={styles.wakeRow} onPress={() => {
+            setIsListening(true);
+            pulseLoop.current = Animated.loop(
+              Animated.sequence([
+                Animated.timing(pulseAnim, { toValue: 1.3, duration: 900, useNativeDriver: true }),
+                Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+              ])
+            );
+            pulseLoop.current.start();
+            wakeWordService.start(() => {
+              pulseLoop.current?.stop();
+              setIsListening(false);
+              startGoLive();
+              navigation.navigate('GoLive', {});
+            });
+          }}>
+            <View style={[styles.wakePulse, { backgroundColor: '#333' }]} />
+            <Text style={[styles.wakeText, { color: BRANDING.textSecondary }]}>Tap to enable wake word</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.card}>
           <Text style={styles.cardLabel}>CONSULTANT</Text>
@@ -150,4 +235,13 @@ const styles = StyleSheet.create({
   disclaimer: { fontSize: 12, color: BRANDING.textSecondary, lineHeight: 18, textAlign: 'center' },
   signOutBtn: { marginTop: 24, padding: 12, alignItems: 'center' },
   signOutText: { fontSize: 13, color: BRANDING.textSecondary, textDecorationLine: 'underline' },
+  wakeRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginBottom: 20, paddingHorizontal: 4,
+  },
+  wakePulse: {
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: '#FF8C00',
+  },
+  wakeText: { fontSize: 12, color: '#FF8C00', fontWeight: '600', letterSpacing: 0.5 },
 });

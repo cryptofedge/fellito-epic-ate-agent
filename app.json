@@ -1,8 +1,9 @@
-{
+﻿{
   "expo": {
     "name": "FELLITO",
     "slug": "fellito-epic-ate-agent",
     "version": "1.0.0",
+    "sdkVersion": "54.0.0",
     "orientation": "portrait",
     "icon": "./src/assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -16,8 +17,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.eclatuniverse.fellito",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Fellito uses your microphone for voice input during Go-Live support sessions.",
-        "NSPhotoLibraryUsageDescription": "Upload Go-Live orientation documents from your photo library."
+        "NSMicrophoneUsageDescription": "Fellito listens for the wake word Hey Fellito and accepts voice input during Go-Live support sessions.",
+        "NSPhotoLibraryUsageDescription": "Upload Go-Live orientation documents from your photo library.",
+        "NSSpeechRecognitionUsageDescription": "Fellito uses speech recognition to detect the Hey Fellito wake word and process voice questions during Go-Live support."
       }
     },
     "android": {
@@ -26,13 +28,25 @@
         "backgroundColor": "#0A0A0F"
       },
       "package": "com.eclatuniverse.fellito",
-      "permissions": ["RECORD_AUDIO", "READ_EXTERNAL_STORAGE"]
+      "permissions": [
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./src/assets/favicon.png"
     },
     "plugins": [
-      ["expo-build-properties", { "ios": { "deploymentTarget": "15.0" } }]
+      ["expo-build-properties", { "ios": { "deploymentTarget": "15.1" } }],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Fellito listens for the Hey Fellito wake word and processes voice questions during Go-Live support.",
+          "speechRecognitionPermission": "Fellito uses speech recognition to detect the Hey Fellito wake word and answer your questions hands-free.",
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+        }
+      ]
     ]
   }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   StyleSheet, KeyboardAvoidingView, Platform, Alert, Image,
@@ -12,6 +12,7 @@ import { EPIC_MODULES } from '@/constants/modules';
 import { askFellito } from '@/services/anthropicService';
 import { speakAsFellito, stopFellitoVoice } from '@/services/elevenLabsService';
 import { scanForPhi, logPhiWarningShown } from '@/services/phiGuard';
+import { wakeWordService } from '@/services/wakeWordService';
 import PhiWarningModal from '@/components/PhiWarningModal';
 import ChatBubble from '@/components/ChatBubble';
 import ModuleTabBar from '@/components/ModuleTabBar';
@@ -20,10 +21,18 @@ type Props = NativeStackScreenProps<RootStackParamList, 'GoLive'>;
 
 export default function GoLiveScreen({ navigation }: Props) {
   const {
-    consultantProfile, activeSession, activeModule,
+    consultantProfile, activeSession, activeModule, authUser,
     setActiveModule, addMessage, endGoLive,
     isVoiceMode, setVoiceMode, isFellitoSpeaking,
+    creatorOverrides, addCreatorOverride,
   } = useAppStore();
+
+  const isCreator = authUser?.role === 'owner';
+
+  // Stop wake word listener when GoLive is active — mic is in use
+  useEffect(() => {
+    wakeWordService.stop();
+  }, []);
 
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -73,8 +82,16 @@ export default function GoLiveScreen({ navigation }: Props) {
         text,
         activeSession?.messages ?? [],
         activeModule,
-        activeSession?.id ?? ''
+        activeSession?.id ?? '',
+        isCreator,
+        creatorOverrides,
+        consultantProfile?.preferredLanguage ?? 'en'
       );
+
+      // If creator sent an override command, store it for future messages
+      if (isCreator && text.startsWith('>>')) {
+        addCreatorOverride(text.slice(2).trim());
+      }
 
       const assistantMsg: ChatMessage = {
         id: `msg_${Date.now() + 1}`,
@@ -144,10 +161,16 @@ export default function GoLiveScreen({ navigation }: Props) {
           <Image source={require('../assets/fellito-avatar.png')} style={styles.headerAvatar} resizeMode="cover" />
           <View>
             <Text style={styles.headerTitle}>FELLITO</Text>
-            <View style={styles.liveBadge}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>GO-LIVE ACTIVE</Text>
-            </View>
+            {isCreator ? (
+              <View style={styles.creatorBadge}>
+                <Text style={styles.creatorBadgeText}>🔑 CREATOR MODE</Text>
+              </View>
+            ) : (
+              <View style={styles.liveBadge}>
+                <View style={styles.liveDot} />
+                <Text style={styles.liveText}>GO-LIVE ACTIVE</Text>
+              </View>
+            )}
           </View>
         </View>
         <View style={styles.headerActions}>
@@ -220,7 +243,7 @@ export default function GoLiveScreen({ navigation }: Props) {
 
           <TextInput
             style={styles.input}
-            placeholder={`Ask Fellito about ${activeModule}...`}
+            placeholder={isCreator ? `>> to override behavior, or ask Fellito anything...` : `Ask Fellito about ${activeModule}...`}
             placeholderTextColor={BRANDING.textSecondary}
             value={inputText}
             onChangeText={setInputText}
@@ -304,6 +327,8 @@ const styles = StyleSheet.create({
   },
   voiceToggleActive: { borderColor: BRANDING.accentColor },
   voiceToggleIcon: { fontSize: 18 },
+  creatorBadge: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  creatorBadgeText: { fontSize: 10, fontWeight: '800', color: '#FF8C00', letterSpacing: 1 },
   input: {
     flex: 1, backgroundColor: BRANDING.cardColor,
     borderRadius: 10, padding: 12,

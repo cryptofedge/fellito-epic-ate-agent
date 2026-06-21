@@ -32,8 +32,9 @@ const upload = multer({
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  const deviceId = req.headers['x-device-id'] ?? null;
   try {
-    const result = await login(email, password);
+    const result = await login(email, password, deviceId);
     res.json(result);
   } catch (err) {
     res.status(401).json({ error: err.message });
@@ -75,6 +76,16 @@ app.delete('/api/admin/team/:id', requireOwner, (req, res) => {
   try {
     deleteTeamMember(req.params.id);
     res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Unbind device from a user account (owner can reset if someone gets a new phone)
+app.post('/api/admin/team/:id/unbind-device', requireOwner, (req, res) => {
+  try {
+    const updated = updateTeamMember(req.params.id, { boundDeviceId: null });
+    res.json({ ok: true, user: updated });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

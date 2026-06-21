@@ -1,0 +1,14 @@
+[
+  {
+    "id": "ac97cbfb-4c48-4b87-9ce5-879fdc90ca15",
+    "name": "Testing",
+    "startDate": "2026-06-21",
+    "endDate": "2026-06-30",
+    "modules": [
+      "all"
+    ],
+    "createdBy": "54184c55-dab9-460c-a9f4-70ca946237b1",
+    "createdAt": 1782063674051,
+    "active": false
+  }
+]

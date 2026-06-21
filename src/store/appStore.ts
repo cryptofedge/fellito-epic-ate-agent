@@ -4,6 +4,7 @@ import { AuthUser } from '@/services/authService';
 export interface ConsultantProfile {
   name: string;
   role: string;
+  preferredLanguage: string;
   assignedModules: string[];
   goLiveEventName: string;
   goLiveStartDate: string;
@@ -66,6 +67,7 @@ interface AppState {
   activeModule: string;
   isVoiceMode: boolean;
   isFellitoSpeaking: boolean;
+  creatorOverrides: string[];
 
   setAuthUser: (user: AuthUser | null) => void;
   setConsultantProfile: (profile: ConsultantProfile) => void;
@@ -78,6 +80,8 @@ interface AppState {
   setVoiceMode: (on: boolean) => void;
   setFellitoSpeaking: (speaking: boolean) => void;
   clearProfile: () => void;
+  addCreatorOverride: (instruction: string) => void;
+  clearCreatorOverrides: () => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -91,6 +95,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeModule: 'General',
   isVoiceMode: false,
   isFellitoSpeaking: false,
+  creatorOverrides: [],
 
   setAuthUser: (user) => set({ authUser: user }),
   setConsultantProfile: (profile) => set({ consultantProfile: profile }),
@@ -140,4 +145,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setVoiceMode: (on) => set({ isVoiceMode: on }),
   setFellitoSpeaking: (speaking) => set({ isFellitoSpeaking: speaking }),
   clearProfile: () => set({ consultantProfile: null }),
+  addCreatorOverride: (instruction) =>
+    set((s) => ({ creatorOverrides: [...s.creatorOverrides, instruction] })),
+  clearCreatorOverrides: () => set({ creatorOverrides: [] }),
 }));

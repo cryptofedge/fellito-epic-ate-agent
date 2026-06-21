@@ -512,6 +512,7 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-edit-member')">Cancel</button>
       <button class="btn btn-danger btn-sm" onclick="removeMember()" style="margin-right:auto;">Remove</button>
+      <button class="btn btn-ghost btn-sm" onclick="unbindDevice()" style="color:var(--warning);border-color:var(--warning);" title="Reset device lock so user can log in from a new phone">📵 Unbind Device</button>
       <button class="btn btn-primary" onclick="submitEditMember()">Save</button>
     </div>
   </div>
@@ -904,6 +905,16 @@
       closeModal('modal-edit-member');
       renderTeam();
       showAlert('team-alert', 'Team member updated.', 'success');
+    } catch (e) { showAlert('edit-alert', e.message, 'error'); }
+  }
+
+  async function unbindDevice() {
+    const id = document.getElementById('edit-member-id').value;
+    if (!confirm('Unbind this device? The user will be able to log in from any phone once — and that new phone will become their bound device.')) return;
+    try {
+      await api('POST', `/api/admin/team/${id}/unbind-device`);
+      closeModal('modal-edit-member');
+      showAlert('team-alert', 'Device unbound. User can log in from a new phone.', 'success');
     } catch (e) { showAlert('edit-alert', e.message, 'error'); }
   }
 

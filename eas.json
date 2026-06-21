@@ -1,0 +1,46 @@
+{
+  "cli": {
+    "version": ">= 14.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": { "simulator": false },
+      "android": { "buildType": "apk" },
+      "env": {
+        "BACKEND_URL": "https://YOUR_BACKEND_URL_HERE"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "ios": { "simulator": false },
+      "android": { "buildType": "apk" },
+      "env": {
+        "BACKEND_URL": "https://YOUR_BACKEND_URL_HERE"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "ios": { "simulator": false },
+      "android": { "buildType": "app-bundle" },
+      "env": {
+        "BACKEND_URL": "https://YOUR_BACKEND_URL_HERE"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "cryptofedge@gmail.com",
+        "ascAppId": "YOUR_APP_STORE_CONNECT_APP_ID",
+        "appleTeamId": "YOUR_APPLE_TEAM_ID"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "internal"
+      }
+    }
+  }
+}

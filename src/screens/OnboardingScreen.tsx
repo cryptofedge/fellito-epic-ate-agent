@@ -13,8 +13,23 @@ import ModuleChip from '@/components/ModuleChip';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
 
-// 3-step onboarding: Profile → Go-Live Event → Module Assignment
-type Step = 1 | 2 | 3;
+// 4-step onboarding: Profile → Language → Go-Live Event → Module Assignment
+type Step = 1 | 2 | 3 | 4;
+
+const LANGUAGES = [
+  { code: 'en', label: 'English', flag: '🇺🇸' },
+  { code: 'yo', label: 'Yoruba', flag: '🇳🇬' },
+  { code: 'ig', label: 'Igbo', flag: '🇳🇬' },
+  { code: 'ha', label: 'Hausa', flag: '🇳🇬' },
+  { code: 'pcm', label: 'Nigerian Pidgin', flag: '🇳🇬' },
+  { code: 'es', label: 'Spanish', flag: '🇪🇸' },
+  { code: 'fr', label: 'French', flag: '🇫🇷' },
+  { code: 'pt', label: 'Portuguese', flag: '🇧🇷' },
+  { code: 'ar', label: 'Arabic', flag: '🇸🇦' },
+  { code: 'zh', label: 'Chinese (Simplified)', flag: '🇨🇳' },
+  { code: 'hi', label: 'Hindi', flag: '🇮🇳' },
+  { code: 'sw', label: 'Swahili', flag: '🌍' },
+];
 
 export default function OnboardingScreen({ navigation }: Props) {
   const { setConsultantProfile } = useAppStore();
@@ -24,11 +39,14 @@ export default function OnboardingScreen({ navigation }: Props) {
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
 
-  // Step 2 — Go-Live Event
+  // Step 2 — Language
+  const [preferredLanguage, setPreferredLanguage] = useState('en');
+
+  // Step 3 — Go-Live Event
   const [eventName, setEventName] = useState('');
   const [goLiveDate, setGoLiveDate] = useState('');
 
-  // Step 3 — Modules
+  // Step 4 — Modules
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
 
   const toggleModule = (id: string) => {
@@ -38,14 +56,15 @@ export default function OnboardingScreen({ navigation }: Props) {
   };
 
   const canStep1 = name.trim().length > 0 && role.trim().length > 0;
-  const canStep2 = eventName.trim().length > 0 && goLiveDate.trim().length > 0;
-  const canStep3 = selectedModules.length > 0;
+  const canStep3 = eventName.trim().length > 0 && goLiveDate.trim().length > 0;
+  const canStep4 = selectedModules.length > 0;
 
   const handleFinish = () => {
-    if (!canStep3) return;
+    if (!canStep4) return;
     setConsultantProfile({
       name: name.trim(),
       role: role.trim(),
+      preferredLanguage,
       assignedModules: selectedModules,
       goLiveEventName: eventName.trim(),
       goLiveStartDate: goLiveDate.trim(),
@@ -72,7 +91,7 @@ export default function OnboardingScreen({ navigation }: Props) {
 
         {/* Step progress dots */}
         <View style={styles.stepRow}>
-          {([1, 2, 3] as Step[]).map((s) => (
+          {([1, 2, 3, 4] as Step[]).map((s) => (
             <View key={s} style={[styles.stepDot, step >= s && styles.stepDotActive]} />
           ))}
         </View>
@@ -121,8 +140,46 @@ export default function OnboardingScreen({ navigation }: Props) {
           </ScrollView>
         )}
 
-        {/* ── STEP 2: Go-Live Event ── */}
+        {/* ── STEP 2: Language ── */}
         {step === 2 && (
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+            <Text style={styles.stepTitle}>Pick your language</Text>
+            <Text style={styles.stepSub}>Fellito will talk to you in this language during Go-Live support.</Text>
+
+            <View style={styles.langGrid}>
+              {LANGUAGES.map((lang) => (
+                <TouchableOpacity
+                  key={lang.code}
+                  style={[styles.langCard, preferredLanguage === lang.code && styles.langCardActive]}
+                  onPress={() => setPreferredLanguage(lang.code)}
+                >
+                  <Text style={styles.langFlag}>{lang.flag}</Text>
+                  <Text style={[styles.langLabel, preferredLanguage === lang.code && styles.langLabelActive]}>
+                    {lang.label}
+                  </Text>
+                  {preferredLanguage === lang.code && (
+                    <View style={styles.langCheck}><Text style={{ color: '#000', fontSize: 10, fontWeight: '900' }}>✓</Text></View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.navRow}>
+              <TouchableOpacity style={styles.backBtn} onPress={() => setStep(1)}>
+                <Text style={styles.backBtnText}>← Back</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.cta, styles.ctaFlex]}
+                onPress={() => setStep(3)}
+              >
+                <Text style={styles.ctaText}>NEXT →</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        )}
+
+        {/* ── STEP 3: Go-Live Event ── */}
+        {step === 3 && (
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <Text style={styles.stepTitle}>Which Go-Live?</Text>
             <Text style={styles.stepSub}>Tell Fellito where he's showing up.</Text>
@@ -148,13 +205,13 @@ export default function OnboardingScreen({ navigation }: Props) {
             />
 
             <View style={styles.navRow}>
-              <TouchableOpacity style={styles.backBtn} onPress={() => setStep(1)}>
+              <TouchableOpacity style={styles.backBtn} onPress={() => setStep(2)}>
                 <Text style={styles.backBtnText}>← Back</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.cta, styles.ctaFlex, !canStep2 && styles.ctaDisabled]}
-                onPress={() => canStep2 && setStep(3)}
-                disabled={!canStep2}
+                style={[styles.cta, styles.ctaFlex, !canStep3 && styles.ctaDisabled]}
+                onPress={() => canStep3 && setStep(4)}
+                disabled={!canStep3}
               >
                 <Text style={styles.ctaText}>NEXT →</Text>
               </TouchableOpacity>
@@ -162,8 +219,8 @@ export default function OnboardingScreen({ navigation }: Props) {
           </ScrollView>
         )}
 
-        {/* ── STEP 3: Module Assignment ── */}
-        {step === 3 && (
+        {/* ── STEP 4: Module Assignment ── */}
+        {step === 4 && (
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <Text style={styles.stepTitle}>Your modules</Text>
             <Text style={styles.stepSub}>
@@ -187,13 +244,13 @@ export default function OnboardingScreen({ navigation }: Props) {
             ))}
 
             <View style={styles.navRow}>
-              <TouchableOpacity style={styles.backBtn} onPress={() => setStep(2)}>
+              <TouchableOpacity style={styles.backBtn} onPress={() => setStep(3)}>
                 <Text style={styles.backBtnText}>← Back</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.cta, styles.ctaFlex, !canStep3 && styles.ctaDisabled]}
+                style={[styles.cta, styles.ctaFlex, !canStep4 && styles.ctaDisabled]}
                 onPress={handleFinish}
-                disabled={!canStep3}
+                disabled={!canStep4}
               >
                 <Text style={styles.ctaText}>LET'S GO ⚡</Text>
               </TouchableOpacity>
@@ -259,4 +316,21 @@ const styles = StyleSheet.create({
   ctaDisabled: { opacity: 0.35 },
   ctaText: { color: '#000', fontWeight: '900', fontSize: 15, letterSpacing: 2 },
   powered: { fontSize: 11, color: BRANDING.textSecondary, textAlign: 'center', marginTop: 32 },
+  langGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 8 },
+  langCard: {
+    width: '47%', backgroundColor: BRANDING.cardColor,
+    borderRadius: 12, padding: 14,
+    borderWidth: 1, borderColor: BRANDING.borderColor,
+    alignItems: 'center', gap: 6, position: 'relative',
+  },
+  langCardActive: { borderColor: BRANDING.accentColor, backgroundColor: '#0d2a30' },
+  langFlag: { fontSize: 28 },
+  langLabel: { fontSize: 13, fontWeight: '600', color: BRANDING.textSecondary, textAlign: 'center' },
+  langLabelActive: { color: BRANDING.accentColor, fontWeight: '800' },
+  langCheck: {
+    position: 'absolute', top: 8, right: 8,
+    width: 18, height: 18, borderRadius: 9,
+    backgroundColor: BRANDING.accentColor,
+    alignItems: 'center', justifyContent: 'center',
+  },
 });

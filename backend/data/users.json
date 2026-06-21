@@ -1,0 +1,12 @@
+[
+  {
+    "id": "54184c55-dab9-460c-a9f4-70ca946237b1",
+    "email": "cryptofedge@gmail.com",
+    "name": "Fellito Rodriguez",
+    "role": "owner",
+    "passwordHash": "$2a$12$/i.5f3u10J.Z6H87C1tC0OdJBm/GBMvCHuFRpsZOR1sUD7Wd.M0E6",
+    "createdAt": 1782063512484,
+    "active": true,
+    "assignedGoLives": []
+  }
+]

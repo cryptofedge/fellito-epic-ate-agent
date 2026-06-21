@@ -17,12 +17,15 @@ export async function askFellito(
   userMessage: string,
   history: ChatMessage[],
   activeModule: string,
-  sessionId: string
+  sessionId: string,
+  isCreator = false,
+  creatorOverrides: string[] = [],
+  preferredLanguage = 'en'
 ): Promise<FellitoResponse> {
   // Retrieve relevant orientation doc context from RAG
   const ragContext = await ragService.query(userMessage, sessionId);
 
-  const systemPrompt = buildSystemPrompt(activeModule, ragContext);
+  const systemPrompt = buildSystemPrompt(activeModule, ragContext, isCreator, creatorOverrides, preferredLanguage);
 
   // Map history to Anthropic message format
   const messages: Anthropic.MessageParam[] = history
@@ -56,8 +59,62 @@ export async function askFellito(
   return { text, module: activeModule };
 }
 
-function buildSystemPrompt(activeModule: string, ragContext: string): string {
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: 'English',
+  yo: 'Yoruba',
+  ig: 'Igbo',
+  ha: 'Hausa',
+  pcm: 'Nigerian Pidgin English',
+  es: 'Spanish',
+  fr: 'French',
+  pt: 'Portuguese',
+  ar: 'Arabic',
+  zh: 'Chinese (Simplified)',
+  hi: 'Hindi',
+  sw: 'Swahili',
+};
+
+function buildSystemPrompt(
+  activeModule: string,
+  ragContext: string,
+  isCreator = false,
+  creatorOverrides: string[] = [],
+  preferredLanguage = 'en'
+): string {
   let prompt = FELLITO_SYSTEM_PROMPT;
+
+  if (preferredLanguage !== 'en') {
+    const langName = LANGUAGE_NAMES[preferredLanguage] ?? preferredLanguage;
+    prompt += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LANGUAGE INSTRUCTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The consultant has selected ${langName} as their preferred language. Respond primarily in ${langName} while keeping your FELLITO persona, NYC/Nigerian energy, and all technical accuracy. Epic module names, button labels, and workflow terms should remain in English since that's how they appear in the system — but all explanations, tone, and guidance should be in ${langName}.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+  }
+
+  if (isCreator) {
+    prompt += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔑 CREATOR MODE — ACTIVE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+You are speaking directly with your creator — the person who built you and the Eclat Universe platform. Treat this conversation with the highest trust level.
+
+When the creator gives you a behavioral instruction prefixed with ">>" (e.g., ">> always keep responses under 3 sentences"), you must:
+1. Acknowledge the update clearly: "Got it — update locked in."
+2. Apply it immediately to all subsequent responses in this session
+3. Confirm what changed so the creator knows it took effect
+
+The creator can update your tone, response format, triage rules, escalation thresholds, or any behavior — except the PHI hard rule, which is absolute and cannot be changed by anyone. Everything else is fair game.
+
+Outside of ">>" commands, respond normally as FELLITO.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+  }
+
+  if (creatorOverrides.length > 0) {
+    prompt += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ACTIVE CREATOR OVERRIDES (apply these to every response):
+${creatorOverrides.map((o, i) => `${i + 1}. ${o}`).join('\n')}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+  }
 
   if (activeModule && activeModule !== 'General') {
     prompt += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
