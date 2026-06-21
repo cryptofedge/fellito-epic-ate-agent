@@ -213,6 +213,7 @@
     <div class="nav-item" onclick="showPage('links')">🔗 Links Library</div>
     <div class="nav-item" onclick="showPage('issues')">🚨 Issues Tracker</div>
     <div class="nav-item" id="nav-invites" onclick="showPage('invites')">🔐 Invite Links</div>
+    <div class="nav-item" id="nav-admin-links" onclick="showPage('admin-links')">🛡️ Admin Access</div>
     <div class="nav-item" id="nav-team" onclick="showPage('team')" style="display:none">👥 Team</div>
 
     <div class="sidebar-spacer"></div>
@@ -477,6 +478,25 @@
         <div class="page-title" style="font-size:18px;margin-bottom:16px;">📋 Go-Live Issue Report</div>
         <div id="report-content"></div>
       </div>
+    </div>
+
+    <!-- ── ADMIN ACCESS LINKS ── -->
+    <div id="page-admin-links" class="page">
+      <div class="page-title">Admin Access Links</div>
+      <div class="page-sub">Generate secure 10-minute admin access links. The recipient can view and use the full admin portal — device-locked on first open.</div>
+
+      <div style="background:#12121A;border:1px solid #1E1E2E;border-radius:14px;padding:20px;margin-bottom:20px;">
+        <div class="section-label">Create New Admin Link</div>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px;">
+          <input id="adm-name" class="form-input" placeholder="Name — e.g. Dr. Johnson · Site Lead" />
+          <input id="adm-email" class="form-input" type="email" placeholder="Email address (optional — sends invite automatically)" />
+          <button class="btn" onclick="createAdminLink()">Generate Admin Link</button>
+        </div>
+        <div id="adm-result" style="margin-top:16px;display:none;"></div>
+      </div>
+
+      <div class="section-label" style="margin-bottom:12px;">Active & Recent Links</div>
+      <div id="adm-links-list"><div style="color:#8A8AA0;font-size:13px;">No admin links created yet.</div></div>
     </div>
 
     <!-- ── TEAM ── -->
@@ -745,6 +765,15 @@
 
   // ─── Boot ─────────────────────────────────────────────────────────────────
   (async function boot() {
+    // Check for temp admin token set by /admin-temp/:token redirect
+    const cookieToken = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('_fellito_admin_token='));
+    if (cookieToken) {
+      const t = cookieToken.split('=')[1];
+      token = t;
+      localStorage.setItem('fellito_admin_token', t);
+      // Clear the cookie so it doesn't persist
+      document.cookie = '_fellito_admin_token=; Max-Age=0; path=/';
+    }
     if (!token) return showLoginScreen();
     try {
       const me = await api('GET', '/api/admin/me');
@@ -850,6 +879,7 @@
     if (name === 'links') loadLinks();
     if (name === 'issues') { populateIssueGoLiveDropdowns(); loadIssues(); }
     if (name === 'invites') { populateInviteGoLiveDropdown(); loadInviteLinks(); }
+    if (name === 'admin-links') loadAdminLinks();
   }
 
   // ─── Data loading ─────────────────────────────────────────────────────────
@@ -1328,6 +1358,72 @@
         <div style="font-size:11px;color:#8A8AA0;">Created: ${created}${l.openedAt?' · Opened: '+new Date(l.openedAt).toLocaleString():''}</div>
         ${l.boundIp?`<div style="font-size:11px;color:#8A8AA0;">🔒 Locked to IP: ${l.boundIp}</div>`:''}
         ${canRevoke&&l.status==='pending'?`<button onclick="navigator.clipboard.writeText('${url}')" style="font-size:11px;padding:4px 14px;background:transparent;border:1px solid #1E1E2E;color:#8A8AA0;border-radius:8px;cursor:pointer;align-self:flex-start;">Copy Link</button>`:''}
+      </div>`;
+    }).join('');
+  }
+
+  // ─── Admin Access Links ───────────────────────────────────────────────────
+  let lastAdminUrl = '';
+
+  async function loadAdminLinks() {
+    try {
+      const links = await api('GET', '/api/admin-links');
+      renderAdminLinks(links);
+    } catch { document.getElementById('adm-links-list').innerHTML = '<p style="color:var(--muted);font-size:13px;">Could not load links.</p>'; }
+  }
+
+  async function createAdminLink() {
+    const label   = document.getElementById('adm-name').value.trim();
+    const toEmail = document.getElementById('adm-email').value.trim();
+    if (!label) { alert('Please enter a name for this person.'); return; }
+    const btn = event.target; btn.textContent = 'Generating...'; btn.disabled = true;
+    try {
+      const link = await api('POST', '/api/admin-links', { label, toEmail: toEmail || null });
+      lastAdminUrl = link.inviteUrl;
+      const box = document.getElementById('adm-result');
+      const sent = toEmail && link.emailSent;
+      box.style.display = 'block';
+      box.innerHTML = `
+        <div style="background:#0A0A0F;border:1px solid ${sent?'#00E096':'#00E5FF'};border-radius:10px;padding:14px;">
+          <div style="font-size:11px;font-weight:700;color:${sent?'#00E096':'#00E5FF'};letter-spacing:2px;margin-bottom:8px;">
+            ${sent ? '✅ ADMIN INVITE SENT' : '🛡️ ADMIN LINK READY'}
+          </div>
+          <div style="font-size:12px;color:#8A8AA0;margin-bottom:10px;">${sent ? `Email sent to ${toEmail} · Link copied below.` : link.inviteUrl}</div>
+          <button class="btn-secondary" style="font-size:12px;padding:6px 16px;" onclick="navigator.clipboard.writeText(lastAdminUrl).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Link',2000)})">Copy Link</button>
+        </div>`;
+      document.getElementById('adm-name').value = '';
+      document.getElementById('adm-email').value = '';
+      loadAdminLinks();
+    } catch (err) { alert('Error: ' + err.message); }
+    finally { btn.textContent = 'Generate Admin Link'; btn.disabled = false; }
+  }
+
+  async function revokeAdminLink(id) {
+    if (!confirm('Revoke this admin link? Access will be immediately cut off.')) return;
+    try { await api('DELETE', `/api/admin-links/${id}`); loadAdminLinks(); }
+    catch (err) { alert('Error: ' + err.message); }
+  }
+
+  function renderAdminLinks(links) {
+    const el = document.getElementById('adm-links-list');
+    if (!links.length) { el.innerHTML = '<p style="color:var(--muted);font-size:13px;">No admin links created yet.</p>'; return; }
+    const statusColor = { pending:'#FFB800', active:'#00E096', expired:'#8A8AA0' };
+    el.innerHTML = links.map(l => {
+      const sc = statusColor[l.status] ?? '#8A8AA0';
+      const canRevoke = l.status === 'pending' || l.status === 'active';
+      const timeLeft = l.sessionExpiresAt ? Math.max(0, Math.ceil((l.sessionExpiresAt - Date.now()) / 60000)) : null;
+      return `<div style="background:#12121A;border:1px solid #1E1E2E;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div>
+            <span style="font-size:14px;font-weight:700;color:#fff;">🛡️ ${l.label || 'Unnamed'}</span>
+            <span style="margin-left:10px;font-size:11px;font-weight:700;color:${sc};background:${sc}22;border:1px solid ${sc}44;border-radius:20px;padding:2px 8px;">${l.status.toUpperCase()}${l.status==='active'&&timeLeft!==null?' · '+timeLeft+'m left':''}</span>
+          </div>
+          ${canRevoke ? `<button onclick="revokeAdminLink('${l.id}')" style="font-size:11px;padding:4px 12px;background:rgba(255,59,92,.15);border:1px solid #FF3B5C;color:#FF3B5C;border-radius:8px;cursor:pointer;">Revoke</button>` : ''}
+        </div>
+        <div style="font-size:11px;color:#8A8AA0;word-break:break-all;">${l.status==='pending' ? l.inviteUrl : 'Link already opened — no longer shareable'}</div>
+        <div style="font-size:11px;color:#8A8AA0;">Created: ${new Date(l.createdAt).toLocaleString()}${l.openedAt?' · Opened: '+new Date(l.openedAt).toLocaleString():''}</div>
+        ${l.boundIp ? `<div style="font-size:11px;color:#8A8AA0;">🔒 Locked to IP: ${l.boundIp}</div>` : ''}
+        ${canRevoke && l.status==='pending' ? `<button onclick="navigator.clipboard.writeText('${l.inviteUrl}')" style="font-size:11px;padding:4px 14px;background:transparent;border:1px solid #1E1E2E;color:#8A8AA0;border-radius:8px;cursor:pointer;align-self:flex-start;">Copy Link</button>` : ''}
       </div>`;
     }).join('');
   }

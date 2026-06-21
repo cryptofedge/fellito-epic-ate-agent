@@ -317,6 +317,79 @@ app.get('/temp/:token', (req, res) => {
 // Auth middleware validates temp sessions (checks browserToken too)
 // Already handled in authMiddleware.js via validateTempSession
 
+// ─── Temp Admin Links ─────────────────────────────────────────────────────────
+
+const adminLinkStore = new Map(); // token → { id, label, token, createdAt, expiresAt, openedAt, boundIp, browserToken }
+
+function createAdminLink(label) {
+  const crypto = require('crypto');
+  const token = crypto.randomBytes(24).toString('hex');
+  const id    = crypto.randomUUID();
+  const link  = { id, label: label || 'Admin', token, createdAt: Date.now(), expiresAt: Date.now() + 10 * 60 * 1000, openedAt: null, sessionExpiresAt: null, boundIp: null, browserToken: null };
+  adminLinkStore.set(token, link);
+  return link;
+}
+
+function openAdminLink(token, ip, cookieToken) {
+  const link = [...adminLinkStore.values()].find(l => l.token === token);
+  if (!link) throw new Error('This admin link is invalid or has expired.');
+  if (Date.now() > link.expiresAt) throw new Error('This admin link has expired.');
+  if (!link.openedAt) {
+    link.openedAt = Date.now();
+    link.sessionExpiresAt = Date.now() + 10 * 60 * 1000;
+    link.boundIp = ip;
+    const crypto = require('crypto');
+    link.browserToken = crypto.randomBytes(16).toString('hex');
+  } else {
+    if (link.boundIp && link.boundIp !== ip) throw new Error('This link is locked to another device.');
+    if (link.browserToken && link.browserToken !== cookieToken) throw new Error('This session is locked to the browser that originally opened it.');
+    if (Date.now() > link.sessionExpiresAt) throw new Error('Your admin session has expired. Request a new link.');
+  }
+  return link;
+}
+
+app.post('/api/admin-links', requireOwner, (req, res) => {
+  const { label, toEmail } = req.body;
+  const link = createAdminLink(label);
+  const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.BACKEND_PORT || 3001}`;
+  const inviteUrl = `${baseUrl}/admin-temp/${link.token}`;
+  res.json({ ...link, inviteUrl, emailSent: !!toEmail, emailError: null });
+  if (toEmail) {
+    sendInviteEmail({ toEmail, toName: label, inviteUrl, label })
+      .catch(err => console.error('[Email] Failed to send admin invite:', err.message));
+  }
+});
+
+app.get('/api/admin-links', requireOwner, (_req, res) => {
+  const links = [...adminLinkStore.values()].map(l => {
+    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.BACKEND_PORT || 3001}`;
+    return { ...l, inviteUrl: `${baseUrl}/admin-temp/${l.token}`, status: !l.openedAt && Date.now() < l.expiresAt ? 'pending' : l.sessionExpiresAt && Date.now() < l.sessionExpiresAt ? 'active' : 'expired' };
+  });
+  res.json(links.reverse());
+});
+
+app.delete('/api/admin-links/:id', requireOwner, (req, res) => {
+  const entry = [...adminLinkStore.entries()].find(([, l]) => l.id === req.params.id);
+  if (!entry) return res.status(404).json({ error: 'Link not found' });
+  adminLinkStore.delete(entry[0]);
+  res.json({ ok: true });
+});
+
+app.get('/admin-temp/:token', (req, res) => {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() ?? req.socket.remoteAddress ?? 'unknown';
+  const cookieToken = req.cookies?.['_fat'] ?? null;
+  try {
+    const link = openAdminLink(req.params.token, ip, cookieToken);
+    const msLeft = link.sessionExpiresAt - Date.now();
+    const jwtToken = signToken({ sub: `admin_temp_${link.id}`, name: link.label, role: 'owner', temp: true }, Math.floor(msLeft / 1000) + 's');
+    res.cookie('_fat', link.browserToken, { httpOnly: true, maxAge: 10 * 60 * 1000, sameSite: 'strict' });
+    res.cookie('_fellito_admin_token', jwtToken, { maxAge: 10 * 60 * 1000, sameSite: 'strict' });
+    res.redirect('/admin/');
+  } catch (err) {
+    res.send(buildErrorPage(err.message));
+  }
+});
+
 function buildChatPage(link, jwtToken, msLeft) {
   const name = link.label || 'Guest Consultant';
 
