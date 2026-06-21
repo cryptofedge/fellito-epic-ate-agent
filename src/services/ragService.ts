@@ -1,4 +1,5 @@
-// RAG service — proxies through backend for embedding + similarity search
+import { authHeaders } from './authService';
+
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:3001';
 
 class RagService {
@@ -6,7 +7,7 @@ class RagService {
     try {
       const response = await fetch(`${BACKEND_URL}/api/rag/query`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ question, sessionId, topK: 5 }),
       });
 
@@ -35,6 +36,7 @@ class RagService {
 
     const response = await fetch(`${BACKEND_URL}/api/rag/ingest`, {
       method: 'POST',
+      headers: await authHeaders(),
       body: formData,
     });
 

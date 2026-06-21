@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FELLITO — Admin Portal</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0A0A0F;
+      --card: #12121A;
+      --border: #1E1E2E;
+      --accent: #00E5FF;
+      --danger: #FF3B5C;
+      --warning: #FFB800;
+      --success: #00E096;
+      --text: #FFFFFF;
+      --muted: #8A8AA0;
+      --orange: #FF8C00;
+    }
+
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+    /* ── Login screen ── */
+    #login-screen {
+      display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px;
+    }
+    .login-card {
+      width: 100%; max-width: 400px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 16px; padding: 40px 32px;
+    }
+    .login-logo { font-size: 32px; font-weight: 900; color: var(--orange); letter-spacing: 6px; margin-bottom: 4px; }
+    .login-sub { font-size: 12px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+    .login-powered { font-size: 11px; color: var(--muted); margin-bottom: 32px; }
+    .login-title { font-size: 18px; font-weight: 700; margin-bottom: 24px; }
+
+    /* ── App shell ── */
+    #app { display: none; flex-direction: row; min-height: 100vh; }
+
+    .sidebar {
+      width: 220px; background: var(--card); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; padding: 24px 0; flex-shrink: 0;
+    }
+    .sidebar-logo { padding: 0 20px 24px; }
+    .sidebar-logo-text { font-size: 20px; font-weight: 900; color: var(--orange); letter-spacing: 4px; }
+    .sidebar-logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+    .nav-item {
+      padding: 10px 20px; font-size: 13px; font-weight: 600; color: var(--muted);
+      cursor: pointer; border-left: 3px solid transparent; transition: all .15s;
+    }
+    .nav-item:hover { color: var(--text); background: rgba(255,255,255,.04); }
+    .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(0,229,255,.05); }
+    .sidebar-spacer { flex: 1; }
+    .sidebar-user { padding: 16px 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+    .sidebar-user strong { display: block; color: var(--text); font-size: 13px; margin-bottom: 2px; }
+    .logout-btn { margin-top: 8px; background: none; border: 1px solid var(--border); color: var(--muted); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; width: 100%; }
+    .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+    .main { flex: 1; padding: 32px; overflow-y: auto; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .page-title { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
+    .page-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+
+    /* ── Forms ── */
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 10px; font-weight: 700; color: var(--accent); letter-spacing: 2px; margin-bottom: 6px; text-transform: uppercase; }
+    input, select, textarea {
+      width: 100%; background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 14px; color: var(--text); font-size: 14px;
+      outline: none; transition: border-color .15s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    input::placeholder, textarea::placeholder { color: var(--muted); }
+    select option { background: var(--card); }
+    textarea { resize: vertical; min-height: 80px; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 700;
+      cursor: pointer; border: none; transition: opacity .15s; letter-spacing: .5px;
+    }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-orange { background: var(--orange); color: #000; }
+    .btn-sm { padding: 6px 14px; font-size: 12px; }
+
+    /* ── Cards / tables ── */
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .card-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .card-meta { font-size: 12px; color: var(--muted); }
+
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: 1.5px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    td { padding: 12px; font-size: 13px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+
+    /* ── Badges ── */
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; letter-spacing: 1px; }
+    .badge-owner { background: rgba(255,140,0,.15); color: var(--orange); border: 1px solid var(--orange); }
+    .badge-contributor { background: rgba(0,229,255,.1); color: var(--accent); border: 1px solid var(--accent); }
+    .badge-active { background: rgba(0,224,150,.1); color: var(--success); border: 1px solid var(--success); }
+    .badge-inactive { background: rgba(255,59,92,.1); color: var(--danger); border: 1px solid var(--danger); }
+    .badge-ready { background: rgba(0,224,150,.1); color: var(--success); border: 1px solid var(--success); }
+
+    /* ── Upload zone ── */
+    .upload-zone {
+      border: 2px dashed var(--border); border-radius: 12px; padding: 40px;
+      text-align: center; cursor: pointer; transition: all .2s;
+    }
+    .upload-zone:hover, .upload-zone.drag-over { border-color: var(--accent); background: rgba(0,229,255,.03); }
+    .upload-zone-icon { font-size: 36px; margin-bottom: 12px; }
+    .upload-zone-text { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .upload-zone-sub { font-size: 12px; color: var(--muted); }
+    #file-input { display: none; }
+
+    /* ── PHI warning ── */
+    .phi-warning {
+      background: #1A1A0A; border: 1px solid var(--warning); border-radius: 10px;
+      padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start;
+      margin-bottom: 16px; display: none;
+    }
+    .phi-warning.show { display: flex; }
+    .phi-warning-text { font-size: 13px; color: var(--warning); line-height: 1.5; flex: 1; }
+
+    /* ── Progress ── */
+    .progress-bar { background: var(--border); border-radius: 4px; height: 6px; overflow: hidden; margin-top: 8px; }
+    .progress-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width .3s; }
+
+    /* ── Alerts ── */
+    .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .alert.show { display: block; }
+    .alert-success { background: rgba(0,224,150,.1); border: 1px solid var(--success); color: var(--success); }
+    .alert-error { background: rgba(255,59,92,.1); border: 1px solid var(--danger); color: var(--danger); }
+
+    /* ── Modal ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 100; align-items: center; justify-content: center; padding: 24px; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 28px; width: 100%; max-width: 480px; }
+    .modal-title { font-size: 18px; font-weight: 800; margin-bottom: 20px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+
+    /* ── Grid ── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 28px; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+    .stat-value { font-size: 28px; font-weight: 900; color: var(--accent); }
+    .stat-label { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
+
+    /* ── Divider ── */
+    hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+    .section-label { font-size: 10px; font-weight: 700; color: var(--accent); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 14px; }
+
+    /* ── Doc list ── */
+    .doc-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
+    .doc-name { flex: 1; font-size: 13px; font-weight: 600; }
+    .doc-meta { font-size: 11px; color: var(--muted); }
+
+    @media (max-width: 700px) {
+      .sidebar { display: none; }
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════
+     LOGIN SCREEN
+══════════════════════════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">FELLITO</div>
+    <div class="login-sub">Epic ATE Go-Live Support</div>
+    <div class="login-powered">Powered by Eclat Universe</div>
+    <div class="login-title">Admin Portal</div>
+
+    <div id="login-alert" class="alert alert-error"></div>
+
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="your@email.com" autocomplete="email" />
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+    <button class="btn btn-orange" style="width:100%;justify-content:center;margin-top:8px;" onclick="doLogin()">
+      SIGN IN
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     APP SHELL
+══════════════════════════════════════════════════════════════ -->
+<div id="app">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-text">FELLITO</div>
+      <div class="sidebar-logo-sub">Admin Portal</div>
+    </div>
+
+    <div class="nav-item active" onclick="showPage('dashboard')">📊 Dashboard</div>
+    <div class="nav-item" onclick="showPage('golives')">⚡ Go-Live Events</div>
+    <div class="nav-item" onclick="showPage('upload')">📄 Upload Docs</div>
+    <div class="nav-item" id="nav-team" onclick="showPage('team')" style="display:none">👥 Team</div>
+
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-user">
+      <strong id="sidebar-user-name">—</strong>
+      <span id="sidebar-user-role">—</span>
+      <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="main">
+
+    <!-- ── DASHBOARD ── -->
+    <div id="page-dashboard" class="page active">
+      <div class="page-title">Dashboard</div>
+      <div class="page-sub">Overview of your Go-Live events and uploaded materials.</div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-golives">—</div>
+          <div class="stat-label">Go-Live Events</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-docs">—</div>
+          <div class="stat-label">Docs Ingested</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-team">—</div>
+          <div class="stat-label">Team Members</div>
+        </div>
+      </div>
+
+      <div class="section-label">Recent Go-Lives</div>
+      <div id="dashboard-golives"></div>
+    </div>
+
+    <!-- ── GO-LIVE EVENTS ── -->
+    <div id="page-golives" class="page">
+      <div class="page-title">Go-Live Events</div>
+      <div class="page-sub">Create and manage Go-Live events. Contributors see only their assigned events.</div>
+
+      <div id="golives-owner-controls" style="display:none;margin-bottom:20px;">
+        <button class="btn btn-orange" onclick="openCreateGoLive()">+ New Go-Live Event</button>
+      </div>
+
+      <div id="golives-alert" class="alert"></div>
+      <div id="golives-list"></div>
+    </div>
+
+    <!-- ── UPLOAD DOCS ── -->
+    <div id="page-upload" class="page">
+      <div class="page-title">Upload Orientation Docs</div>
+      <div class="page-sub">Upload Go-Live workflow docs, tip sheets, and build guides. Fellito ingests them immediately.</div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <div class="form-group">
+          <label>Go-Live Event</label>
+          <select id="upload-golive-select">
+            <option value="">Select a Go-Live event...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Module Tag (optional)</label>
+          <input type="text" id="upload-module-tag" placeholder="e.g. Cadence, Willow, Stork" />
+        </div>
+      </div>
+
+      <!-- PHI warning -->
+      <div class="phi-warning" id="phi-warning">
+        <span style="font-size:20px;">⚠️</span>
+        <div class="phi-warning-text">
+          <strong>Possible patient data detected in filename.</strong><br>
+          Fellito only processes department workflow content — no PHI.
+          If this is a tip sheet or workflow doc, confirm below. If it contains real patient data, remove it first.
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="dismissPhiWarning()">Not PHI</button>
+      </div>
+
+      <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+        <input type="file" id="file-input" accept=".pdf,.txt,.doc,.docx" multiple onchange="onFilesSelected(event)" />
+        <div class="upload-zone-icon">📄</div>
+        <div class="upload-zone-text">Drop files here or click to browse</div>
+        <div class="upload-zone-sub">PDF, Word, or TXT · Max 25MB per file · Multiple files OK</div>
+      </div>
+
+      <div id="upload-queue" style="margin-top:16px;"></div>
+      <div id="upload-alert" class="alert"></div>
+
+      <hr>
+      <div class="section-label">Ingested Documents</div>
+      <div id="ingested-docs"></div>
+    </div>
+
+    <!-- ── TEAM ── -->
+    <div id="page-team" class="page">
+      <div class="page-title">Team</div>
+      <div class="page-sub">Manage who can access the admin portal and upload Go-Live materials.</div>
+
+      <button class="btn btn-orange" style="margin-bottom:20px;" onclick="openInviteModal()">+ Add Team Member</button>
+
+      <div id="team-alert" class="alert"></div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead>
+            <tr>
+              <th>NAME</th>
+              <th>EMAIL</th>
+              <th>ROLE</th>
+              <th>STATUS</th>
+              <th>ASSIGNED GO-LIVES</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="team-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ══════════════════════════════════════════════════════════════
+     MODALS
+══════════════════════════════════════════════════════════════ -->
+
+<!-- Create Go-Live -->
+<div class="modal-overlay" id="modal-golive">
+  <div class="modal">
+    <div class="modal-title">New Go-Live Event</div>
+    <div class="form-group">
+      <label>Organization / Event Name</label>
+      <input type="text" id="gl-name" placeholder="e.g. St. Mary's Epic Go-Live Phase 1" />
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Start Date</label>
+        <input type="date" id="gl-start" />
+      </div>
+      <div class="form-group">
+        <label>End Date (optional)</label>
+        <input type="date" id="gl-end" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Modules (comma-separated)</label>
+      <input type="text" id="gl-modules" placeholder="e.g. Cadence, Willow, Stork, OpTime" />
+    </div>
+    <div id="gl-alert" class="alert"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-golive')">Cancel</button>
+      <button class="btn btn-orange" onclick="submitCreateGoLive()">Create Event</button>
+    </div>
+  </div>
+</div>
+
+<!-- Invite Team Member -->
+<div class="modal-overlay" id="modal-invite">
+  <div class="modal">
+    <div class="modal-title">Add Team Member</div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="inv-name" placeholder="Jane Smith" />
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="inv-email" placeholder="jane@org.com" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Temporary Password</label>
+      <input type="password" id="inv-password" placeholder="They can change this after logging in" />
+    </div>
+    <div class="form-group">
+      <label>Assign Go-Live Events</label>
+      <div id="inv-golives-checks" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;"></div>
+    </div>
+    <div id="inv-alert" class="alert"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-invite')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitInvite()">Add Member</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Team Member -->
+<div class="modal-overlay" id="modal-edit-member">
+  <div class="modal">
+    <div class="modal-title">Edit Team Member</div>
+    <input type="hidden" id="edit-member-id" />
+    <div class="form-group">
+      <label>Name</label>
+      <input type="text" id="edit-member-name" />
+    </div>
+    <div class="form-group">
+      <label>New Password (leave blank to keep current)</label>
+      <input type="password" id="edit-member-password" placeholder="Optional" />
+    </div>
+    <div class="form-group">
+      <label>Assigned Go-Lives</label>
+      <div id="edit-golives-checks" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;"></div>
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="edit-member-active">
+        <option value="true">Active</option>
+        <option value="false">Inactive (blocks login)</option>
+      </select>
+    </div>
+    <div id="edit-alert" class="alert"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-member')">Cancel</button>
+      <button class="btn btn-danger btn-sm" onclick="removeMember()" style="margin-right:auto;">Remove</button>
+      <button class="btn btn-primary" onclick="submitEditMember()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ─── State ────────────────────────────────────────────────────────────────
+  let API = window.location.origin;
+  let token = localStorage.getItem('fellito_admin_token');
+  let currentUser = null;
+  let goLives = [];
+  let ingestedDocs = [];
+  let pendingFiles = [];
+
+  // ─── Boot ─────────────────────────────────────────────────────────────────
+  (async function boot() {
+    if (!token) return showLoginScreen();
+    try {
+      const me = await api('GET', '/api/admin/me');
+      currentUser = me;
+      showApp();
+    } catch {
+      token = null;
+      localStorage.removeItem('fellito_admin_token');
+      showLoginScreen();
+    }
+  })();
+
+  // ─── API helper ───────────────────────────────────────────────────────────
+  async function api(method, path, body, isFormData = false) {
+    const opts = {
+      method,
+      headers: { Authorization: `Bearer ${token}` },
+    };
+    if (body && !isFormData) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    } else if (body && isFormData) {
+      opts.body = body;
+    }
+    const res = await fetch(API + path, opts);
+    if (res.status === 401) { doLogout(); throw new Error('Unauthorized'); }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? 'Request failed');
+    return data;
+  }
+
+  // ─── Auth ─────────────────────────────────────────────────────────────────
+  async function doLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    const alert = document.getElementById('login-alert');
+    alert.className = 'alert'; alert.textContent = '';
+    try {
+      const res = await fetch(API + '/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      token = data.token;
+      currentUser = data.user;
+      localStorage.setItem('fellito_admin_token', token);
+      showApp();
+    } catch (e) {
+      showAlert(alert, e.message, 'error');
+    }
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') doLogin();
+  });
+
+  function doLogout() {
+    token = null; currentUser = null;
+    localStorage.removeItem('fellito_admin_token');
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+
+  // ─── Navigation ───────────────────────────────────────────────────────────
+  function showLoginScreen() {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  }
+
+  async function showApp() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    document.getElementById('sidebar-user-name').textContent = currentUser.name;
+    document.getElementById('sidebar-user-role').textContent = currentUser.role === 'owner' ? '⭐ Owner' : '👤 Contributor';
+    if (currentUser.role === 'owner') {
+      document.getElementById('nav-team').style.display = 'block';
+      document.getElementById('golives-owner-controls').style.display = 'block';
+    }
+    await loadData();
+    showPage('dashboard');
+  }
+
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    event?.target?.classList?.add('active');
+    if (name === 'dashboard') renderDashboard();
+    if (name === 'golives') renderGoLives();
+    if (name === 'upload') renderUploadPage();
+    if (name === 'team') renderTeam();
+  }
+
+  // ─── Data loading ─────────────────────────────────────────────────────────
+  async function loadData() {
+    try {
+      goLives = await api('GET', '/api/golives');
+    } catch { goLives = []; }
+  }
+
+  // ─── Dashboard ────────────────────────────────────────────────────────────
+  async function renderDashboard() {
+    document.getElementById('stat-golives').textContent = goLives.length;
+    try {
+      const team = await api('GET', '/api/admin/team');
+      document.getElementById('stat-team').textContent = team.length;
+    } catch { document.getElementById('stat-team').textContent = '—'; }
+    document.getElementById('stat-docs').textContent = '—';
+    const el = document.getElementById('dashboard-golives');
+    if (!goLives.length) { el.innerHTML = '<p style="color:var(--muted);font-size:13px;">No Go-Live events yet.</p>'; return; }
+    el.innerHTML = goLives.slice(0, 5).map(gl => `
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div class="card-title">${esc(gl.name)}</div>
+            <div class="card-meta">${esc(gl.startDate)} ${gl.endDate ? '→ ' + esc(gl.endDate) : ''}</div>
+          </div>
+          <span class="badge ${gl.active ? 'badge-active' : 'badge-inactive'}">${gl.active ? 'ACTIVE' : 'INACTIVE'}</span>
+        </div>
+      </div>`).join('');
+  }
+
+  // ─── Go-Lives page ────────────────────────────────────────────────────────
+  function renderGoLives() {
+    const el = document.getElementById('golives-list');
+    if (!goLives.length) { el.innerHTML = '<p style="color:var(--muted);font-size:13px;">No Go-Live events. Create one to get started.</p>'; return; }
+    el.innerHTML = `
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead><tr><th>EVENT</th><th>START DATE</th><th>MODULES</th><th>STATUS</th>${currentUser.role==='owner'?'<th></th>':''}</tr></thead>
+          <tbody>
+            ${goLives.map(gl => `
+              <tr>
+                <td><strong>${esc(gl.name)}</strong></td>
+                <td>${esc(gl.startDate)}</td>
+                <td style="font-size:11px;color:var(--muted);">${gl.modules?.join(', ') || '—'}</td>
+                <td><span class="badge ${gl.active ? 'badge-active' : 'badge-inactive'}">${gl.active ? 'ACTIVE' : 'INACTIVE'}</span></td>
+                ${currentUser.role==='owner' ? `<td style="text-align:right;">
+                  <button class="btn btn-ghost btn-sm" onclick='toggleGoLive("${gl.id}", ${!gl.active})'>${gl.active ? 'Deactivate' : 'Activate'}</button>
+                  <button class="btn btn-danger btn-sm" style="margin-left:6px;" onclick='deleteGoLiveConfirm("${gl.id}")'>Delete</button>
+                </td>` : ''}
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  function openCreateGoLive() {
+    document.getElementById('gl-name').value = '';
+    document.getElementById('gl-start').value = '';
+    document.getElementById('gl-end').value = '';
+    document.getElementById('gl-modules').value = '';
+    hideAlert('gl-alert');
+    openModal('modal-golive');
+  }
+
+  async function submitCreateGoLive() {
+    const name = document.getElementById('gl-name').value.trim();
+    const startDate = document.getElementById('gl-start').value;
+    const endDate = document.getElementById('gl-end').value;
+    const modules = document.getElementById('gl-modules').value.split(',').map(s=>s.trim()).filter(Boolean);
+    if (!name || !startDate) return showAlert('gl-alert', 'Name and start date are required.', 'error');
+    try {
+      await api('POST', '/api/golives', { name, startDate, endDate, modules });
+      await loadData();
+      closeModal('modal-golive');
+      renderGoLives();
+      showAlert('golives-alert', 'Go-Live event created.', 'success');
+    } catch (e) { showAlert('gl-alert', e.message, 'error'); }
+  }
+
+  async function toggleGoLive(id, active) {
+    try {
+      await api('PATCH', `/api/golives/${id}`, { active });
+      await loadData();
+      renderGoLives();
+    } catch (e) { alert(e.message); }
+  }
+
+  async function deleteGoLiveConfirm(id) {
+    if (!confirm('Delete this Go-Live event? This cannot be undone.')) return;
+    try {
+      await api('DELETE', `/api/golives/${id}`);
+      await loadData();
+      renderGoLives();
+      showAlert('golives-alert', 'Go-Live event deleted.', 'success');
+    } catch (e) { showAlert('golives-alert', e.message, 'error'); }
+  }
+
+  // ─── Upload page ──────────────────────────────────────────────────────────
+  function renderUploadPage() {
+    const sel = document.getElementById('upload-golive-select');
+    sel.innerHTML = '<option value="">Select a Go-Live event...</option>' +
+      goLives.map(gl => `<option value="${gl.id}">${esc(gl.name)}</option>`).join('');
+    loadIngestedDocs();
+  }
+
+  async function loadIngestedDocs() {
+    const el = document.getElementById('ingested-docs');
+    el.innerHTML = '<p style="color:var(--muted);font-size:13px;">Loading...</p>';
+    const goLiveId = document.getElementById('upload-golive-select').value;
+    try {
+      const docs = await api('GET', `/api/rag/docs?sessionId=${goLiveId || 'standby'}`);
+      if (!docs.length) { el.innerHTML = '<p style="color:var(--muted);font-size:13px;">No documents ingested yet for this event.</p>'; return; }
+      el.innerHTML = docs.map(d => `
+        <div class="doc-item">
+          <span style="font-size:20px;">📄</span>
+          <div style="flex:1;">
+            <div class="doc-name">${esc(d.filename)}</div>
+            <div class="doc-meta">${d.chunkCount} chunks indexed</div>
+          </div>
+          <span class="badge badge-ready">READY</span>
+          <button class="btn btn-danger btn-sm" onclick='deleteDoc("${d.id}")'>Remove</button>
+        </div>`).join('');
+    } catch { el.innerHTML = '<p style="color:var(--muted);font-size:13px;">Could not load documents.</p>'; }
+  }
+
+  document.getElementById && document.getElementById('upload-golive-select') &&
+    document.getElementById('upload-golive-select').addEventListener('change', loadIngestedDocs);
+
+  // PHI scan (simple client-side)
+  const PHI_PATTERNS = [/MRN[\s:#]*\d{4,}/i, /\d{3}-\d{2}-\d{4}/, /DOB[\s:#]*\d{1,2}[\/\-]\d{1,2}/i];
+  function mightHavePhi(filename) {
+    return PHI_PATTERNS.some(p => p.test(filename)) &&
+      !['MRN field','sample','example','training','placeholder'].some(s => filename.toLowerCase().includes(s));
+  }
+
+  let phiConfirmed = false;
+  function dismissPhiWarning() { phiConfirmed = true; document.getElementById('phi-warning').classList.remove('show'); processQueue(); }
+
+  function onFilesSelected(e) { addFiles(Array.from(e.target.files)); e.target.value = ''; }
+  function onDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+  function onDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+  function onDrop(e) { e.preventDefault(); e.currentTarget.classList.remove('drag-over'); addFiles(Array.from(e.dataTransfer.files)); }
+
+  function addFiles(files) {
+    const hasPhi = files.some(f => mightHavePhi(f.name));
+    if (hasPhi && !phiConfirmed) {
+      document.getElementById('phi-warning').classList.add('show');
+      pendingFiles = files;
+      return;
+    }
+    pendingFiles = files;
+    processQueue();
+  }
+
+  async function processQueue() {
+    const goLiveId = document.getElementById('upload-golive-select').value;
+    if (!goLiveId) { showAlert('upload-alert', 'Select a Go-Live event before uploading.', 'error'); return; }
+    const moduleTag = document.getElementById('upload-module-tag').value.trim();
+    const queue = document.getElementById('upload-queue');
+    hideAlert('upload-alert');
+
+    for (const file of pendingFiles) {
+      const itemId = 'q_' + Date.now() + Math.random();
+      queue.insertAdjacentHTML('beforeend', `
+        <div id="${itemId}" class="doc-item">
+          <span style="font-size:20px;">📄</span>
+          <div style="flex:1;">
+            <div class="doc-name">${esc(file.name)}</div>
+            <div class="progress-bar"><div class="progress-fill" id="${itemId}-bar" style="width:10%"></div></div>
+          </div>
+          <span style="color:var(--muted);font-size:12px;">Uploading...</span>
+        </div>`);
+
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('sessionId', goLiveId);
+        if (moduleTag) fd.append('moduleTag', moduleTag);
+
+        document.getElementById(`${itemId}-bar`).style.width = '50%';
+        const result = await api('POST', '/api/rag/ingest', fd, true);
+        document.getElementById(`${itemId}-bar`).style.width = '100%';
+        document.getElementById(itemId).querySelector('span:last-child').innerHTML = `<span class="badge badge-ready">${result.chunkCount} chunks</span>`;
+      } catch (e) {
+        document.getElementById(itemId).querySelector('span:last-child').innerHTML = `<span style="color:var(--danger);font-size:12px;">Failed: ${esc(e.message)}</span>`;
+      }
+    }
+
+    pendingFiles = [];
+    phiConfirmed = false;
+    setTimeout(loadIngestedDocs, 500);
+  }
+
+  async function deleteDoc(docId) {
+    if (!confirm('Remove this document from Fellito\'s knowledge base?')) return;
+    try {
+      await api('DELETE', `/api/rag/docs/${docId}`);
+      loadIngestedDocs();
+    } catch (e) { alert(e.message); }
+  }
+
+  // ─── Team page ────────────────────────────────────────────────────────────
+  async function renderTeam() {
+    try {
+      const team = await api('GET', '/api/admin/team');
+      const tbody = document.getElementById('team-table');
+      tbody.innerHTML = team.map(u => `
+        <tr>
+          <td><strong>${esc(u.name)}</strong></td>
+          <td style="color:var(--muted);">${esc(u.email)}</td>
+          <td><span class="badge ${u.role==='owner'?'badge-owner':'badge-contributor'}">${u.role.toUpperCase()}</span></td>
+          <td><span class="badge ${u.active?'badge-active':'badge-inactive'}">${u.active?'ACTIVE':'INACTIVE'}</span></td>
+          <td style="font-size:11px;color:var(--muted);">${u.assignedGoLives?.length ? u.assignedGoLives.length + ' event(s)' : u.role==='owner'?'All':'None'}</td>
+          <td style="text-align:right;">${u.role!=='owner'?`<button class="btn btn-ghost btn-sm" onclick='openEditMember(${JSON.stringify(u)})'>Edit</button>`:''}
+          </td>
+        </tr>`).join('');
+    } catch (e) { showAlert('team-alert', e.message, 'error'); }
+  }
+
+  function openInviteModal() {
+    document.getElementById('inv-name').value = '';
+    document.getElementById('inv-email').value = '';
+    document.getElementById('inv-password').value = '';
+    hideAlert('inv-alert');
+    const checks = document.getElementById('inv-golives-checks');
+    checks.innerHTML = goLives.map(gl => `
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);cursor:pointer;">
+        <input type="checkbox" value="${gl.id}" style="width:auto;accent-color:var(--accent);" />
+        ${esc(gl.name)}
+      </label>`).join('');
+    openModal('modal-invite');
+  }
+
+  async function submitInvite() {
+    const name = document.getElementById('inv-name').value.trim();
+    const email = document.getElementById('inv-email').value.trim();
+    const password = document.getElementById('inv-password').value;
+    const assignedGoLives = [...document.querySelectorAll('#inv-golives-checks input:checked')].map(c => c.value);
+    if (!name || !email || !password) return showAlert('inv-alert', 'Name, email, and password are required.', 'error');
+    try {
+      await api('POST', '/api/admin/team', { name, email, password, assignedGoLives });
+      closeModal('modal-invite');
+      renderTeam();
+      showAlert('team-alert', `${name} added to the team.`, 'success');
+    } catch (e) { showAlert('inv-alert', e.message, 'error'); }
+  }
+
+  function openEditMember(user) {
+    document.getElementById('edit-member-id').value = user.id;
+    document.getElementById('edit-member-name').value = user.name;
+    document.getElementById('edit-member-password').value = '';
+    document.getElementById('edit-member-active').value = String(user.active);
+    hideAlert('edit-alert');
+    const checks = document.getElementById('edit-golives-checks');
+    checks.innerHTML = goLives.map(gl => `
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);cursor:pointer;">
+        <input type="checkbox" value="${gl.id}" ${user.assignedGoLives?.includes(gl.id)?'checked':''} style="width:auto;accent-color:var(--accent);" />
+        ${esc(gl.name)}
+      </label>`).join('');
+    openModal('modal-edit-member');
+  }
+
+  async function submitEditMember() {
+    const id = document.getElementById('edit-member-id').value;
+    const name = document.getElementById('edit-member-name').value.trim();
+    const password = document.getElementById('edit-member-password').value;
+    const active = document.getElementById('edit-member-active').value === 'true';
+    const assignedGoLives = [...document.querySelectorAll('#edit-golives-checks input:checked')].map(c => c.value);
+    const body = { name, active, assignedGoLives };
+    if (password) body.password = password;
+    try {
+      await api('PATCH', `/api/admin/team/${id}`, body);
+      closeModal('modal-edit-member');
+      renderTeam();
+      showAlert('team-alert', 'Team member updated.', 'success');
+    } catch (e) { showAlert('edit-alert', e.message, 'error'); }
+  }
+
+  async function removeMember() {
+    const id = document.getElementById('edit-member-id').value;
+    if (!confirm('Remove this team member? They will lose access immediately.')) return;
+    try {
+      await api('DELETE', `/api/admin/team/${id}`);
+      closeModal('modal-edit-member');
+      renderTeam();
+      showAlert('team-alert', 'Team member removed.', 'success');
+    } catch (e) { showAlert('edit-alert', e.message, 'error'); }
+  }
+
+  // ─── Modal helpers ────────────────────────────────────────────────────────
+  function openModal(id) { document.getElementById(id).classList.add('show'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+  document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', (e) => { if (e.target === m) m.classList.remove('show'); }));
+
+  // ─── Alert helpers ────────────────────────────────────────────────────────
+  function showAlert(idOrEl, msg, type) {
+    const el = typeof idOrEl === 'string' ? document.getElementById(idOrEl) : idOrEl;
+    if (!el) return;
+    el.textContent = msg;
+    el.className = `alert alert-${type} show`;
+    if (type === 'success') setTimeout(() => el.classList.remove('show'), 4000);
+  }
+  function hideAlert(id) { const el = document.getElementById(id); if (el) el.className = 'alert'; }
+
+  function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  // Wire up upload-golive-select change after DOM is ready
+  window.addEventListener('DOMContentLoaded', () => {
+    const sel = document.getElementById('upload-golive-select');
+    if (sel) sel.addEventListener('change', loadIngestedDocs);
+  });
+</script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 import { Audio } from 'expo-av';
 import { useAppStore } from '@/store/appStore';
+import { authHeaders } from './authService';
 
 // Separate ElevenLabs key — never reused from any other project
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:3001';
@@ -30,7 +31,7 @@ export async function speakAsFellito(text: string): Promise<void> {
     // Request audio from backend (keeps API key server-side)
     const response = await fetch(`${BACKEND_URL}/api/voice`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
       body: JSON.stringify({ text, voice_settings: VOICE_SETTINGS, model_id: MODEL_ID }),
     });
 

@@ -8,11 +8,19 @@ import { RootStackParamList } from '@/navigation/RootNavigator';
 import { useAppStore } from '@/store/appStore';
 import { BRANDING } from '@/constants/persona';
 import { EPIC_MODULES } from '@/constants/modules';
+import { logout } from '@/services/authService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Standby'>;
 
 export default function StandbyScreen({ navigation }: Props) {
-  const { consultantProfile, startGoLive, pastSessions } = useAppStore();
+  const { consultantProfile, startGoLive, pastSessions, setAuthUser, clearProfile } = useAppStore();
+
+  const handleSignOut = async () => {
+    await logout();
+    setAuthUser(null);
+    clearProfile();
+    navigation.replace('Login');
+  };
 
   const assignedModules = EPIC_MODULES.filter((m) =>
     consultantProfile?.assignedModules.includes(m.id)
@@ -90,6 +98,10 @@ export default function StandbyScreen({ navigation }: Props) {
           Fellito is dormant until a Go-Live is activated. Upload your client's orientation
           documents now so he's ready the moment the Go-Live starts.
         </Text>
+
+        <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
+          <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -136,4 +148,6 @@ const styles = StyleSheet.create({
   },
   quickLinkText: { color: BRANDING.textPrimary, fontSize: 14, fontWeight: '600' },
   disclaimer: { fontSize: 12, color: BRANDING.textSecondary, lineHeight: 18, textAlign: 'center' },
+  signOutBtn: { marginTop: 24, padding: 12, alignItems: 'center' },
+  signOutText: { fontSize: 13, color: BRANDING.textSecondary, textDecorationLine: 'underline' },
 });

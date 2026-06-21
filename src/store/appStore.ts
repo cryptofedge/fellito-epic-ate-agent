@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { AuthUser } from '@/services/authService';
 
 export interface ConsultantProfile {
   name: string;
@@ -55,6 +56,7 @@ export interface PhiAuditEntry {
 }
 
 interface AppState {
+  authUser: AuthUser | null;
   consultantProfile: ConsultantProfile | null;
   isGoLiveActive: boolean;
   activeSession: GoLiveSession | null;
@@ -65,6 +67,7 @@ interface AppState {
   isVoiceMode: boolean;
   isFellitoSpeaking: boolean;
 
+  setAuthUser: (user: AuthUser | null) => void;
   setConsultantProfile: (profile: ConsultantProfile) => void;
   startGoLive: () => void;
   endGoLive: () => void;
@@ -78,6 +81,7 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
+  authUser: null,
   consultantProfile: null,
   isGoLiveActive: false,
   activeSession: null,
@@ -88,6 +92,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   isVoiceMode: false,
   isFellitoSpeaking: false,
 
+  setAuthUser: (user) => set({ authUser: user }),
   setConsultantProfile: (profile) => set({ consultantProfile: profile }),
 
   startGoLive: () => {

@@ -1,7 +1,7 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { FELLITO_SYSTEM_PROMPT } from '@/constants/persona';
 import { ChatMessage } from '@/store/appStore';
 import { ragService } from './ragService';
+import { authHeaders } from './authService';
 
 const MODEL = 'claude-sonnet-4-6';
 
@@ -36,7 +36,7 @@ export async function askFellito(
 
   const response = await fetch(`${BACKEND_URL}/api/chat`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify({
       model: MODEL,
       system: systemPrompt,

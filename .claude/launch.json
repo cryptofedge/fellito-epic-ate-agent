@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "fellito-admin",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "backend/admin", "-p", "4200", "--no-clipboard"],
+      "port": 4200
+    }
+  ]
+}

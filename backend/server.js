@@ -6,7 +6,11 @@ const axios = require('axios');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+
 const { ingestDocument, queryDocuments, listDocuments, deleteDocument } = require('./ragEngine');
+const { bootstrapOwner, login, inviteContributor, listTeam, updateTeamMember, deleteTeamMember, getUserById } = require('./authEngine');
+const { requireAuth, requireOwner } = require('./authMiddleware');
+const { listGoLives, createGoLive, updateGoLive, deleteGoLive } = require('./goLiveStore');
 
 const app = express();
 const PORT = process.env.BACKEND_PORT ?? 3001;
@@ -14,44 +18,120 @@ const PORT = process.env.BACKEND_PORT ?? 3001;
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
+// Serve the admin portal as a static SPA
+app.use('/admin', express.static(path.join(__dirname, 'admin')));
+
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const upload = multer({
   dest: path.join(__dirname, 'uploads'),
-  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB
+  limits: { fileSize: 25 * 1024 * 1024 },
 });
 
-// ─── Chat endpoint ───────────────────────────────────────────────────────────
-app.post('/api/chat', async (req, res) => {
-  const { model, system, messages, max_tokens } = req.body;
-
-  if (!model || !messages) {
-    return res.status(400).json({ error: 'Missing model or messages' });
-  }
-
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
   try {
-    const response = await anthropic.messages.create({
-      model,
-      system,
-      messages,
-      max_tokens: max_tokens ?? 1024,
-    });
+    const result = await login(email, password);
+    res.json(result);
+  } catch (err) {
+    res.status(401).json({ error: err.message });
+  }
+});
+
+// ─── Admin: current user ──────────────────────────────────────────────────────
+app.get('/api/admin/me', requireAuth, (req, res) => {
+  const { id, email, name, role, assignedGoLives } = req.user;
+  res.json({ id, email, name, role, assignedGoLives });
+});
+
+// ─── Admin: team management (owner only) ──────────────────────────────────────
+app.get('/api/admin/team', requireAuth, (_req, res) => {
+  res.json(listTeam());
+});
+
+app.post('/api/admin/team', requireOwner, async (req, res) => {
+  const { email, name, password, assignedGoLives } = req.body;
+  if (!email || !name || !password) return res.status(400).json({ error: 'email, name, and password required' });
+  try {
+    const user = await inviteContributor({ email, name, password, assignedGoLives });
+    res.json(user);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.patch('/api/admin/team/:id', requireOwner, async (req, res) => {
+  try {
+    const updated = updateTeamMember(req.params.id, req.body);
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.delete('/api/admin/team/:id', requireOwner, (req, res) => {
+  try {
+    deleteTeamMember(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ─── Go-Live events ───────────────────────────────────────────────────────────
+app.get('/api/golives', requireAuth, (req, res) => {
+  res.json(listGoLives(req.user));
+});
+
+app.post('/api/golives', requireOwner, (req, res) => {
+  const { name, startDate, endDate, modules } = req.body;
+  if (!name || !startDate) return res.status(400).json({ error: 'name and startDate required' });
+  try {
+    const event = createGoLive({ name, startDate, endDate, modules, createdBy: req.user.id });
+    res.json(event);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.patch('/api/golives/:id', requireOwner, (req, res) => {
+  try {
+    const updated = updateGoLive(req.params.id, req.body);
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.delete('/api/golives/:id', requireOwner, (req, res) => {
+  try {
+    deleteGoLive(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ─── Chat (requires auth) ─────────────────────────────────────────────────────
+app.post('/api/chat', requireAuth, async (req, res) => {
+  const { model, system, messages, max_tokens } = req.body;
+  if (!model || !messages) return res.status(400).json({ error: 'Missing model or messages' });
+  try {
+    const response = await anthropic.messages.create({ model, system, messages, max_tokens: max_tokens ?? 1024 });
     res.json(response);
   } catch (err) {
-    console.error('[Chat] Error:', err.message);
+    console.error('[Chat]', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ─── Voice endpoint ──────────────────────────────────────────────────────────
-app.post('/api/voice', async (req, res) => {
+// ─── Voice (requires auth) ────────────────────────────────────────────────────
+app.post('/api/voice', requireAuth, async (req, res) => {
   const { text, voice_settings, model_id } = req.body;
   const voiceId = process.env.ELEVENLABS_VOICE_ID;
-
-  if (!voiceId) {
-    return res.status(500).json({ error: 'ELEVENLABS_VOICE_ID not configured' });
-  }
-
+  if (!voiceId) return res.status(500).json({ error: 'ELEVENLABS_VOICE_ID not configured' });
   try {
     const response = await axios({
       method: 'post',
@@ -68,57 +148,49 @@ app.post('/api/voice', async (req, res) => {
       },
       responseType: 'arraybuffer',
     });
-
     res.set('Content-Type', 'audio/mpeg');
     res.send(Buffer.from(response.data));
   } catch (err) {
-    console.error('[Voice] Error:', err.response?.status, err.message);
+    console.error('[Voice]', err.response?.status, err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ─── RAG: Ingest document ────────────────────────────────────────────────────
-app.post('/api/rag/ingest', upload.single('file'), async (req, res) => {
+// ─── RAG: Ingest (requires auth) ──────────────────────────────────────────────
+app.post('/api/rag/ingest', requireAuth, upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-
   const { sessionId, moduleTag } = req.body;
   try {
     const result = await ingestDocument(req.file.path, req.file.originalname, sessionId, moduleTag);
-    // Clean up temp file
     fs.unlink(req.file.path, () => {});
     res.json(result);
   } catch (err) {
-    console.error('[RAG Ingest] Error:', err.message);
     fs.unlink(req.file.path, () => {});
+    console.error('[RAG Ingest]', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ─── RAG: Query ─────────────────────────────────────────────────────────────
-app.post('/api/rag/query', async (req, res) => {
+// ─── RAG: Query (requires auth) ───────────────────────────────────────────────
+app.post('/api/rag/query', requireAuth, async (req, res) => {
   const { question, sessionId, topK } = req.body;
   try {
     const context = await queryDocuments(question, sessionId, topK ?? 5);
     res.json({ context });
   } catch (err) {
-    console.error('[RAG Query] Error:', err.message);
     res.json({ context: '' });
   }
 });
 
-// ─── RAG: List docs ──────────────────────────────────────────────────────────
-app.get('/api/rag/docs', async (req, res) => {
-  const { sessionId } = req.query;
+// ─── RAG: List docs (requires auth) ───────────────────────────────────────────
+app.get('/api/rag/docs', requireAuth, async (req, res) => {
   try {
-    const docs = await listDocuments(sessionId);
-    res.json(docs);
-  } catch (err) {
-    res.json([]);
-  }
+    res.json(await listDocuments(req.query.sessionId));
+  } catch { res.json([]); }
 });
 
-// ─── RAG: Delete doc ─────────────────────────────────────────────────────────
-app.delete('/api/rag/docs/:docId', async (req, res) => {
+// ─── RAG: Delete doc (requires auth) ──────────────────────────────────────────
+app.delete('/api/rag/docs/:docId', requireAuth, async (req, res) => {
   try {
     await deleteDocument(req.params.docId);
     res.json({ ok: true });
@@ -127,9 +199,14 @@ app.delete('/api/rag/docs/:docId', async (req, res) => {
   }
 });
 
-// ─── Health ──────────────────────────────────────────────────────────────────
+// ─── Health ───────────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok', agent: 'FELLITO' }));
 
-app.listen(PORT, () => {
-  console.log(`FELLITO backend running on port ${PORT}`);
-});
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+(async () => {
+  await bootstrapOwner();
+  app.listen(PORT, () => {
+    console.log(`\nFELLITO backend running on port ${PORT}`);
+    console.log(`Admin portal → http://localhost:${PORT}/admin\n`);
+  });
+})();
