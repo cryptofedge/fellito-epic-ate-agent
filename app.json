@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "FELLITO",
+    "slug": "fellito-epic-ate-agent",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./src/assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./src/assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0A0F"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.eclatuniverse.fellito",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Fellito uses your microphone for voice input during Go-Live support sessions.",
+        "NSPhotoLibraryUsageDescription": "Upload Go-Live orientation documents from your photo library."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/adaptive-icon.png",
+        "backgroundColor": "#0A0A0F"
+      },
+      "package": "com.eclatuniverse.fellito",
+      "permissions": ["RECORD_AUDIO", "READ_EXTERNAL_STORAGE"]
+    },
+    "web": {
+      "favicon": "./src/assets/favicon.png"
+    },
+    "plugins": [
+      ["expo-build-properties", { "ios": { "deploymentTarget": "15.0" } }]
+    ]
+  }
+}
