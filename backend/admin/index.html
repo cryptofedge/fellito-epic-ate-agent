@@ -212,6 +212,7 @@
     <div class="nav-item" onclick="showPage('upload')">📄 Upload Docs</div>
     <div class="nav-item" onclick="showPage('links')">🔗 Links Library</div>
     <div class="nav-item" onclick="showPage('issues')">🚨 Issues Tracker</div>
+    <div class="nav-item" id="nav-invites" onclick="showPage('invites')">🔐 Invite Links</div>
     <div class="nav-item" id="nav-team" onclick="showPage('team')" style="display:none">👥 Team</div>
 
     <div class="sidebar-spacer"></div>
@@ -413,6 +414,37 @@
 
       <div class="section-label">Indexed Links</div>
       <div id="links-list"><p style="color:var(--muted);font-size:13px;">Loading...</p></div>
+    </div>
+
+    <!-- ── INVITE LINKS ── -->
+    <div id="page-invites" class="page">
+      <div class="page-title">Invite Links</div>
+      <div class="page-sub">Generate secure 10-minute access links. Each link is device-locked — it cannot be shared or forwarded.</div>
+
+      <div style="background:#12121A;border:1px solid #1E1E2E;border-radius:14px;padding:20px;margin-bottom:20px;">
+        <div class="section-label">Create New Invite Link</div>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px;">
+          <input id="inv-name" class="form-input" placeholder="Name — e.g. John Smith · ICU Charge Nurse" />
+          <input id="inv-email" class="form-input" type="email" placeholder="Email address (optional — sends invite automatically)" />
+          <select id="inv-golive" class="form-input">
+            <option value="">No specific Go-Live (general access)</option>
+          </select>
+          <button class="btn-primary" onclick="createInviteLink()" id="inv-btn" style="align-self:flex-start;padding:10px 28px;">Send Invite</button>
+        </div>
+        <div id="inv-result" style="display:none;margin-top:16px;background:#0A0A0F;border:1px solid #1E1E2E;border-radius:10px;padding:16px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:2px;margin-bottom:10px;" id="inv-result-label">INVITE SENT</div>
+          <div style="word-break:break-all;font-size:13px;color:#8A8AA0;margin-bottom:12px;" id="inv-url"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn-secondary" style="padding:8px 20px;font-size:12px;" onclick="copyInviteUrl()">Copy Link</button>
+          </div>
+          <div style="font-size:11px;color:#8A8AA0;margin-top:10px;">⏱ Expires 10 min from now · Device-locked on first open · Cannot be shared</div>
+        </div>
+      </div>
+
+      <div class="section-label">Active & Recent Links</div>
+      <div id="inv-list" style="margin-top:12px;display:flex;flex-direction:column;gap:10px;">
+        <p style="color:var(--muted);font-size:13px;">Loading...</p>
+      </div>
     </div>
 
     <!-- ── ISSUES TRACKER ── -->
@@ -737,11 +769,20 @@
     } else if (body && isFormData) {
       opts.body = body;
     }
-    const res = await fetch(API + path, opts);
-    if (res.status === 401) { doLogout(); throw new Error('Unauthorized'); }
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? 'Request failed');
-    return data;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    try {
+      const res = await fetch(API + path, { ...opts, signal: controller.signal });
+      clearTimeout(timer);
+      if (res.status === 401) { doLogout(); throw new Error('Unauthorized'); }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Request failed');
+      return data;
+    } catch (err) {
+      clearTimeout(timer);
+      if (err.name === 'AbortError') throw new Error('Request timed out — check your connection.');
+      throw err;
+    }
   }
 
   // ─── Auth ─────────────────────────────────────────────────────────────────
@@ -808,6 +849,7 @@
     if (name === 'team') renderTeam();
     if (name === 'links') loadLinks();
     if (name === 'issues') { populateIssueGoLiveDropdowns(); loadIssues(); }
+    if (name === 'invites') { populateInviteGoLiveDropdown(); loadInviteLinks(); }
   }
 
   // ─── Data loading ─────────────────────────────────────────────────────────
@@ -1182,6 +1224,112 @@
     if (!confirm('Remove this link from Fellito\'s knowledge base?')) return;
     try { await api('DELETE', `/api/links/${id}`); loadLinks(); }
     catch (e) { alert(e.message); }
+  }
+
+  // ─── Invite Links ─────────────────────────────────────────────────────────
+  let lastInviteUrl = '';
+
+  async function loadInviteLinks() {
+    try {
+      const r = await api('GET', '/api/temp-links');
+      renderInviteLinks(r);
+    } catch { document.getElementById('inv-list').innerHTML = '<p style="color:var(--muted);font-size:13px;">Could not load links.</p>'; }
+  }
+
+  async function populateInviteGoLiveDropdown() {
+    try {
+      const lives = await api('GET', '/api/golives');
+      const sel = document.getElementById('inv-golive');
+      sel.innerHTML = '<option value="">No specific Go-Live (general access)</option>';
+      lives.forEach(g => {
+        const o = document.createElement('option');
+        o.value = g.id; o.textContent = g.name;
+        sel.appendChild(o);
+      });
+    } catch {}
+  }
+
+  async function createInviteLink() {
+    const label = document.getElementById('inv-name').value.trim();
+    const toEmail = document.getElementById('inv-email').value.trim();
+    const goLiveId = document.getElementById('inv-golive').value || null;
+    if (!label) { alert('Please enter a name for this person.'); return; }
+
+    const btn = document.getElementById('inv-btn');
+    btn.textContent = 'Sending...'; btn.disabled = true;
+
+    try {
+      const link = await api('POST', '/api/temp-links', { label, toEmail: toEmail || null, goLiveId });
+      lastInviteUrl = link.inviteUrl;
+
+      const resultLabel = document.getElementById('inv-result-label');
+      const resultBox = document.getElementById('inv-result');
+      const urlEl = document.getElementById('inv-url');
+
+      if (toEmail && link.emailSent) {
+        resultLabel.textContent = '✅ INVITE EMAIL SENT';
+        resultLabel.style.color = '#00E096';
+        resultBox.style.borderColor = '#00E096';
+        urlEl.textContent = `Email sent to ${toEmail} · Link also copied below in case you need it.`;
+      } else if (toEmail && link.emailError) {
+        resultLabel.textContent = '⚠️ EMAIL FAILED — COPY LINK MANUALLY';
+        resultLabel.style.color = '#FFB800';
+        resultBox.style.borderColor = '#FFB800';
+        urlEl.textContent = link.inviteUrl;
+        console.warn('Email error:', link.emailError);
+      } else {
+        resultLabel.textContent = '🔗 INVITE LINK READY';
+        resultLabel.style.color = '#00E5FF';
+        resultBox.style.borderColor = '#00E5FF';
+        urlEl.textContent = link.inviteUrl;
+      }
+
+      resultBox.style.display = 'block';
+      document.getElementById('inv-name').value = '';
+      document.getElementById('inv-email').value = '';
+      loadInviteLinks();
+    } catch (err) { alert('Error: ' + err.message); }
+    finally { btn.textContent = 'Send Invite'; btn.disabled = false; }
+  }
+
+  function copyInviteUrl() {
+    navigator.clipboard.writeText(lastInviteUrl).then(() => {
+      const btn = document.querySelector('#inv-result .btn-secondary');
+      btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy Link', 2000);
+    });
+  }
+
+  async function revokeInvite(id) {
+    if (!confirm('Revoke this link? The user will immediately lose access.')) return;
+    try { await api('DELETE', `/api/temp-links/${id}`); loadInviteLinks(); }
+    catch (err) { alert('Error: ' + err.message); }
+  }
+
+  function renderInviteLinks(links) {
+    const el = document.getElementById('inv-list');
+    if (!links.length) { el.innerHTML = '<p style="color:var(--muted);font-size:13px;">No invite links created yet.</p>'; return; }
+    const sorted = [...links].sort((a,b) => b.createdAt - a.createdAt);
+    const statusColor = { pending:'#FFB800', active:'#00E096', expired:'#8A8AA0', revoked:'#FF3B5C' };
+    el.innerHTML = sorted.map(l => {
+      const url = `${window.location.origin}/temp/${l.token}`;
+      const created = new Date(l.createdAt).toLocaleString();
+      const sc = statusColor[l.status] ?? '#8A8AA0';
+      const canRevoke = l.status === 'pending' || l.status === 'active';
+      const timeLeft = l.sessionExpiresAt ? Math.max(0, Math.ceil((l.sessionExpiresAt - Date.now()) / 60000)) : null;
+      return `<div style="background:#12121A;border:1px solid #1E1E2E;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div>
+            <span style="font-size:14px;font-weight:700;color:#fff;">${l.label || 'Unnamed'}</span>
+            <span style="margin-left:10px;font-size:11px;font-weight:700;color:${sc};background:${sc}22;border:1px solid ${sc}44;border-radius:20px;padding:2px 8px;">${l.status.toUpperCase()}${l.status==='active'&&timeLeft!==null?' · '+timeLeft+'m left':''}</span>
+          </div>
+          ${canRevoke ? `<button onclick="revokeInvite('${l.id}')" style="font-size:11px;padding:4px 12px;background:rgba(255,59,92,.15);border:1px solid #FF3B5C;color:#FF3B5C;border-radius:8px;cursor:pointer;">Revoke</button>` : ''}
+        </div>
+        <div style="font-size:11px;color:#8A8AA0;word-break:break-all;">${l.status==='pending'?url:'Link already opened — URL no longer shareable'}</div>
+        <div style="font-size:11px;color:#8A8AA0;">Created: ${created}${l.openedAt?' · Opened: '+new Date(l.openedAt).toLocaleString():''}</div>
+        ${l.boundIp?`<div style="font-size:11px;color:#8A8AA0;">🔒 Locked to IP: ${l.boundIp}</div>`:''}
+        ${canRevoke&&l.status==='pending'?`<button onclick="navigator.clipboard.writeText('${url}')" style="font-size:11px;padding:4px 14px;background:transparent;border:1px solid #1E1E2E;color:#8A8AA0;border-radius:8px;cursor:pointer;align-self:flex-start;">Copy Link</button>`:''}
+      </div>`;
+    }).join('');
   }
 
   // ─── Issues Tracker ───────────────────────────────────────────────────────

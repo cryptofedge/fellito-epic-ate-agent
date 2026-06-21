@@ -102,6 +102,10 @@ function verifyToken(token) {
   return jwt.verify(token, JWT_SECRET);
 }
 
+function signToken(payload, expiresIn) {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn });
+}
+
 // ─── Team management (owner only) ────────────────────────────────────────────
 async function inviteContributor({ email, name, password, assignedGoLives }) {
   const users = loadUsers();
@@ -166,6 +170,7 @@ module.exports = {
   bootstrapOwner,
   login,
   verifyToken,
+  signToken,
   inviteContributor,
   listTeam,
   updateTeamMember,

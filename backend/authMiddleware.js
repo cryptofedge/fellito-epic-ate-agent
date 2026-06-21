@@ -1,4 +1,5 @@
 const { verifyToken, getUserById } = require('./authEngine');
+const { validateTempSession } = require('./tempLinkStore');
 
 function requireAuth(req, res, next) {
   const header = req.headers['authorization'];
@@ -8,6 +9,26 @@ function requireAuth(req, res, next) {
 
   try {
     const payload = verifyToken(header.slice(7));
+
+    // Temp session — validate against live store (catches revokes + expiry + device switching)
+    if (payload.temp && payload.linkId) {
+      if (!validateTempSession(payload.linkId, payload.browserToken)) {
+        return res.status(401).json({ error: 'SESSION_EXPIRED', message: 'Your session has expired. Contact your administrator for a new invite link.' });
+      }
+      // Attach a synthetic user object for temp sessions
+      req.user = {
+        id: payload.sub,
+        name: payload.name ?? 'Guest',
+        email: payload.email ?? '',
+        role: 'contributor',
+        assignedGoLives: payload.assignedGoLives ?? [],
+        temp: true,
+        sessionExpiresAt: payload.sessionExpiresAt,
+        active: true,
+      };
+      return next();
+    }
+
     const user = getUserById(payload.sub);
     if (!user || !user.active) return res.status(401).json({ error: 'Account inactive' });
     req.user = user;

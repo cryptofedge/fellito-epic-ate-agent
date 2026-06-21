@@ -10,5 +10,39 @@
     "createdBy": "54184c55-dab9-460c-a9f4-70ca946237b1",
     "createdAt": 1782063674051,
     "active": false
+  },
+  {
+    "id": "05a08871-7cb4-43cc-92ec-94c9d13ec536",
+    "name": "Northwell Health — Epic Go-Live Demo",
+    "startDate": "2026-06-21",
+    "endDate": "2026-07-21",
+    "modules": [
+      "ClinDoc",
+      "CPOE",
+      "ASAP",
+      "Beacon",
+      "Beaker",
+      "ADT",
+      "OpTime",
+      "Prelude",
+      "Radiant",
+      "MyChart"
+    ],
+    "departments": [
+      "ICU",
+      "ED",
+      "Med/Surg",
+      "Oncology",
+      "OR",
+      "Radiology",
+      "Pharmacy",
+      "Registration",
+      "Labor & Delivery",
+      "Pediatrics"
+    ],
+    "active": true,
+    "createdBy": "54184c55-dab9-460c-a9f4-70ca946237b1",
+    "createdAt": 1782076877219,
+    "description": "Demo Go-Live for team testing. 30-day access window."
   }
 ]

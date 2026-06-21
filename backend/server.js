@@ -13,12 +13,17 @@ const { requireAuth, requireOwner } = require('./authMiddleware');
 const { listGoLives, createGoLive, updateGoLive, deleteGoLive } = require('./goLiveStore');
 const { listIssues, createIssue, updateIssue, deleteIssue, generateReport } = require('./issuesStore');
 const { listLinks, ingestLink, deleteLink } = require('./linksEngine');
+const { createTempLink, listTempLinks, openLink, revokeTempLink, validateTempSession, SESSION_TTL_MS } = require('./tempLinkStore');
+const { sendInviteEmail } = require('./emailService');
+const cookieParser = require('cookie-parser');
+const { signToken } = require('./authEngine');
 
 const app = express();
 const PORT = process.env.BACKEND_PORT ?? 3001;
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+app.use(cookieParser());
 
 // Serve the admin portal as a static SPA
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
@@ -261,6 +266,453 @@ app.delete('/api/issues/:id', requireOwner, (req, res) => {
 app.get('/api/issues/report/:goLiveId', requireAuth, (req, res) => {
   res.json(generateReport(req.params.goLiveId));
 });
+
+// ─── Temp Invite Links ────────────────────────────────────────────────────────
+
+app.post('/api/temp-links', requireOwner, async (req, res) => {
+  try {
+    const { label, goLiveId, assignedModules, toEmail } = req.body;
+    const link = createTempLink({ label, goLiveId, assignedModules });
+    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.BACKEND_PORT || 3001}`;
+    const inviteUrl = `${baseUrl}/temp/${link.token}`;
+
+    // Respond immediately — email sends in background so button never hangs
+    res.json({ ...link, inviteUrl, emailSent: !!toEmail, emailError: null });
+
+    if (toEmail) {
+      sendInviteEmail({ toEmail, toName: label, inviteUrl, label })
+        .catch(err => console.error('[Email] Failed to send invite:', err.message));
+    }
+  } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+app.get('/api/temp-links', requireOwner, (_req, res) => res.json(listTempLinks()));
+
+app.delete('/api/temp-links/:id', requireOwner, (req, res) => {
+  try { res.json(revokeTempLink(req.params.id)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+// Browser opens this — device-locks session, serves full phone-style chat UI
+app.get('/temp/:token', (req, res) => {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() ?? req.socket.remoteAddress ?? 'unknown';
+  const cookieToken = req.cookies?.['_ft'] ?? null;
+  try {
+    const { link, isNew } = openLink(req.params.token, ip, cookieToken);
+    const msLeft = link.sessionExpiresAt - Date.now();
+    const jwtToken = signToken(
+      { sub: `temp_${link.id}`, name: link.label || 'Guest', temp: true, linkId: link.id,
+        browserToken: link.browserToken, assignedGoLives: link.goLiveId ? [link.goLiveId] : [] },
+      Math.floor(msLeft / 1000) + 's'
+    );
+    if (isNew) {
+      res.cookie('_ft', link.browserToken, { httpOnly: true, maxAge: SESSION_TTL_MS, sameSite: 'strict' });
+    }
+    res.send(buildChatPage(link, jwtToken, msLeft));
+  } catch (err) {
+    res.send(buildErrorPage(err.message));
+  }
+});
+
+// Auth middleware validates temp sessions (checks browserToken too)
+// Already handled in authMiddleware.js via validateTempSession
+
+function buildChatPage(link, jwtToken, msLeft) {
+  const name = link.label || 'Guest Consultant';
+
+  const ALL_MODULES = ['ClinDoc','CPOE','ASAP (ED)','Beacon (Oncology)','Beaker (Lab)','ADT','OpTime/Anesthesia','Prelude/Cadence','Radiant','MyChart','In Basket','Haiku/Canto','Reporting'];
+  const ALL_DEPTS   = ['ICU','Emergency Department','Med/Surg','Oncology','OR/Surgical','Radiology','Pharmacy','Registration','Labor & Delivery','Pediatrics','PACU','Outpatient Clinic','Blood Bank','Pathology'];
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>FELLITO</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:#050508;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow:hidden;}
+
+.shell{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#050508;padding:20px;}
+.phone{width:100%;max-width:390px;height:min(844px,calc(100vh - 40px));background:#0A0A0F;border-radius:44px;overflow:hidden;display:flex;flex-direction:column;border:1px solid #1E1E2E;box-shadow:0 40px 120px rgba(0,229,255,0.08);position:relative;}
+
+/* status bar */
+.status-bar{background:#0A0A0F;padding:12px 24px 6px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.status-time{font-size:15px;font-weight:700;color:#fff;}
+.status-right{display:flex;gap:6px;align-items:center;}
+
+/* header */
+.header{background:#12121A;padding:10px 16px 12px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #1E1E2E;flex-shrink:0;}
+.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#00E5FF,#0070FF);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#000;flex-shrink:0;}
+.header-info{flex:1;min-width:0;}
+.header-name{font-size:15px;font-weight:800;color:#00E5FF;letter-spacing:1px;}
+.header-sub{font-size:10px;color:#8A8AA0;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.timer-pill{background:rgba(255,184,0,0.15);border:1px solid #FFB800;border-radius:20px;padding:4px 10px;display:flex;align-items:center;gap:4px;flex-shrink:0;}
+.timer-text{font-size:12px;font-weight:800;color:#FFB800;font-family:'Courier New',monospace;}
+
+/* ── SCREENS ── */
+.screen{display:none;flex:1;flex-direction:column;overflow:hidden;}
+.screen.active{display:flex;}
+
+/* welcome screen */
+.welcome-body{flex:1;overflow-y:auto;padding:24px 20px;display:flex;flex-direction:column;gap:16px;}
+.welcome-body::-webkit-scrollbar{width:0;}
+.golive-card{background:#12121A;border:1px solid #00E5FF;border-radius:16px;padding:18px;}
+.golive-tag{font-size:10px;color:#00E5FF;font-weight:700;letter-spacing:2px;margin-bottom:6px;}
+.golive-name{font-size:17px;font-weight:800;color:#fff;margin-bottom:4px;}
+.golive-dates{font-size:12px;color:#8A8AA0;}
+.section-title{font-size:11px;color:#8A8AA0;font-weight:700;letter-spacing:2px;margin-bottom:10px;}
+.chip-grid{display:flex;flex-wrap:wrap;gap:8px;}
+.chip{background:#12121A;border:1px solid #1E1E2E;border-radius:20px;padding:8px 14px;font-size:13px;color:#fff;cursor:pointer;transition:all .15s;}
+.chip:active,.chip.selected{background:#00E5FF;color:#000;border-color:#00E5FF;font-weight:700;}
+.welcome-footer{background:#12121A;border-top:1px solid #1E1E2E;padding:14px 20px;flex-shrink:0;padding-bottom:max(14px,env(safe-area-inset-bottom));}
+.start-btn{width:100%;background:#00E5FF;color:#000;font-size:15px;font-weight:800;border:none;border-radius:14px;padding:14px;cursor:pointer;letter-spacing:1px;transition:opacity .15s;}
+.start-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+/* chat screen */
+.messages{flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;}
+.messages::-webkit-scrollbar{width:0;}
+.bubble{max-width:82%;padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.5;word-break:break-word;}
+.bubble.user{background:#00E5FF;color:#000;font-weight:600;border-bottom-right-radius:4px;align-self:flex-end;}
+.bubble.assistant{background:#1E1E2E;color:#fff;border-bottom-left-radius:4px;align-self:flex-start;border:1px solid #2A2A3E;}
+.bubble.assistant .sender{font-size:10px;font-weight:800;color:#00E5FF;letter-spacing:1px;margin-bottom:4px;}
+.bubble.typing{background:#1E1E2E;border:1px solid #2A2A3E;align-self:flex-start;}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#8A8AA0;animation:blink 1.2s infinite;}
+.dot:nth-child(2){animation-delay:.2s;}.dot:nth-child(3){animation-delay:.4s;}
+@keyframes blink{0%,80%,100%{opacity:.3;}40%{opacity:1;}}
+.context-bar{background:#12121A;border-bottom:1px solid #1E1E2E;padding:6px 16px;display:flex;gap:8px;flex-shrink:0;}
+.ctx-chip{background:#0A0A0F;border:1px solid #1E1E2E;border-radius:12px;padding:4px 10px;font-size:11px;color:#8A8AA0;}
+.ctx-chip span{color:#00E5FF;font-weight:700;}
+.input-bar{background:#12121A;border-top:1px solid #1E1E2E;padding:10px 12px;display:flex;align-items:flex-end;gap:8px;flex-shrink:0;padding-bottom:max(10px,env(safe-area-inset-bottom));}
+.input-wrap{flex:1;background:#0A0A0F;border:1px solid #1E1E2E;border-radius:22px;padding:10px 16px;}
+textarea{width:100%;background:transparent;border:none;outline:none;color:#fff;font-size:14px;resize:none;max-height:100px;font-family:inherit;line-height:1.4;}
+textarea::placeholder{color:#8A8AA0;}
+.send-btn{width:40px;height:40px;border-radius:50%;background:#00E5FF;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.send-btn svg{fill:#000;}
+.send-btn:disabled{background:#1E1E2E;cursor:not-allowed;}
+.send-btn:disabled svg{fill:#8A8AA0;}
+
+/* expired overlay */
+.expired-overlay{display:none;position:absolute;inset:0;background:rgba(10,10,15,.97);border-radius:44px;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:32px;text-align:center;z-index:100;}
+.expired-overlay.show{display:flex;}
+
+@media(max-width:430px){
+  .shell{padding:0;background:#0A0A0F;}
+  .phone{max-width:100%;height:100vh;border-radius:0;border:none;}
+  .expired-overlay{border-radius:0;}
+}
+</style>
+</head>
+<body>
+<div class="shell"><div class="phone" id="phone">
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <span class="status-time" id="clock"></span>
+    <div class="status-right">
+      <div style="width:6px;height:6px;border-radius:50%;background:#00E096;"></div>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="#fff" opacity=".6"><rect x="0" y="4" width="3" height="8" rx="1"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1"/><rect x="9" y="0.5" width="3" height="11.5" rx="1"/><rect x="13.5" y="0" width="2.5" height="12" rx="1" opacity=".3"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="22" height="11" rx="3.5" stroke="#fff" stroke-opacity=".4"/><rect x="1.5" y="1.5" width="18" height="9" rx="2.5" fill="#00E096"/><path d="M23.5 4v4a2 2 0 000-4z" fill="#fff" opacity=".4"/></svg>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="avatar">F</div>
+    <div class="header-info">
+      <div class="header-name">FELLITO</div>
+      <div class="header-sub" id="headerSub">${name} · Epic ATE Support</div>
+    </div>
+    <div class="timer-pill">
+      <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4.5" stroke="#FFB800" stroke-width="1" fill="none"/><path d="M5 2.5V5l1.5 1.5" stroke="#FFB800" stroke-width="1" stroke-linecap="round"/></svg>
+      <span class="timer-text" id="countdown">10:00</span>
+    </div>
+  </div>
+
+  <!-- ── SCREEN 1: Welcome / Go-Live Orientation ── -->
+  <div class="screen active" id="screen-welcome">
+    <div class="welcome-body">
+      <div class="golive-card">
+        <div class="golive-tag">YOUR GO-LIVE</div>
+        <div class="golive-name" id="glName">Loading...</div>
+        <div class="golive-dates" id="glDates"></div>
+      </div>
+
+      <div>
+        <div class="section-title">SELECT YOUR MODULE</div>
+        <div class="chip-grid" id="moduleChips"></div>
+      </div>
+
+      <div>
+        <div class="section-title">SELECT YOUR DEPARTMENT</div>
+        <div class="chip-grid" id="deptChips"></div>
+      </div>
+    </div>
+    <div class="welcome-footer">
+      <button class="start-btn" id="startBtn" disabled onclick="startChat()">Select module & department to continue</button>
+    </div>
+  </div>
+
+  <!-- ── SCREEN 2: Chat ── -->
+  <div class="screen" id="screen-chat">
+    <div class="context-bar">
+      <div class="ctx-chip">Module: <span id="ctxModule">—</span></div>
+      <div class="ctx-chip">Dept: <span id="ctxDept">—</span></div>
+    </div>
+    <div class="messages" id="messages"></div>
+    <div class="input-bar">
+      <div class="input-wrap">
+        <textarea id="input" placeholder="Ask Fellito anything..." rows="1"></textarea>
+      </div>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Expired overlay -->
+  <div class="expired-overlay" id="expiredOverlay">
+    <div style="font-size:48px;">⛔</div>
+    <div style="font-size:20px;font-weight:900;color:#FF3B5C;">Session Expired</div>
+    <div style="font-size:13px;color:#8A8AA0;line-height:1.6;">Your 10-minute access window has ended.<br><br>Contact your administrator for a new invite link.</div>
+  </div>
+
+</div></div>
+
+<script>
+const TOKEN = '${jwtToken}';
+const SESSION_EXPIRES_AT = ${link.sessionExpiresAt};
+const GOLIVE_ID = '${link.goLiveId || ''}';
+const USER_NAME = '${name}';
+const ALL_MODULES = ${JSON.stringify(ALL_MODULES)};
+const ALL_DEPTS   = ${JSON.stringify(ALL_DEPTS)};
+
+let selectedModule = '';
+let selectedDept   = '';
+let chatHistory    = [];
+let expired        = false;
+
+// ── Clock ──────────────────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
+}
+updateClock(); setInterval(updateClock, 10000);
+
+// ── Countdown ──────────────────────────────────────────────────────────────
+function updateTimer() {
+  const ms = SESSION_EXPIRES_AT - Date.now();
+  if (ms <= 0) { expire(); return; }
+  const m = Math.floor(ms / 60000);
+  const s = Math.floor((ms % 60000) / 1000).toString().padStart(2,'0');
+  document.getElementById('countdown').textContent = m + ':' + s;
+  const pill = document.querySelector('.timer-pill');
+  const txt  = document.getElementById('countdown');
+  if (ms < 120000)      { pill.style.borderColor='#FF3B5C'; pill.style.background='rgba(255,59,92,.15)'; txt.style.color='#FF3B5C'; }
+  else if (ms < 300000) { pill.style.borderColor='#FF8C00'; pill.style.background='rgba(255,140,0,.15)'; txt.style.color='#FF8C00'; }
+}
+updateTimer(); setInterval(updateTimer, 1000);
+
+function expire() {
+  if (expired) return; expired = true;
+  document.getElementById('expiredOverlay').classList.add('show');
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('input').disabled   = true;
+}
+
+// ── Load Go-Live info ──────────────────────────────────────────────────────
+async function loadGoLive() {
+  const modules = ALL_MODULES;
+  const depts   = ALL_DEPTS;
+  let glName = 'Northwell Health — Epic Go-Live Demo';
+  let glDates = '';
+
+  try {
+    const res = await fetch('/api/golives', { headers: { Authorization: 'Bearer ' + TOKEN } });
+    if (res.ok) {
+      const lives = await res.json();
+      const gl = GOLIVE_ID ? lives.find(g => g.id === GOLIVE_ID) : lives.find(g => g.active) ?? lives[0];
+      if (gl) {
+        glName  = gl.name;
+        glDates = (gl.startDate || '') + (gl.endDate ? ' → ' + gl.endDate : '');
+      }
+    }
+  } catch {}
+
+  document.getElementById('glName').textContent  = glName;
+  document.getElementById('glDates').textContent = glDates;
+
+  // Render module chips
+  const mc = document.getElementById('moduleChips');
+  modules.forEach(m => {
+    const c = document.createElement('div');
+    c.className = 'chip'; c.textContent = m;
+    c.onclick = () => {
+      mc.querySelectorAll('.chip').forEach(x => x.classList.remove('selected'));
+      c.classList.add('selected');
+      selectedModule = m;
+      checkReady();
+    };
+    mc.appendChild(c);
+  });
+
+  // Render department chips
+  const dc = document.getElementById('deptChips');
+  depts.forEach(d => {
+    const c = document.createElement('div');
+    c.className = 'chip'; c.textContent = d;
+    c.onclick = () => {
+      dc.querySelectorAll('.chip').forEach(x => x.classList.remove('selected'));
+      c.classList.add('selected');
+      selectedDept = d;
+      checkReady();
+    };
+    dc.appendChild(c);
+  });
+}
+
+function checkReady() {
+  const btn = document.getElementById('startBtn');
+  if (selectedModule && selectedDept) {
+    btn.disabled = false;
+    btn.textContent = 'Start Chatting with Fellito →';
+  }
+}
+
+// ── Start chat ─────────────────────────────────────────────────────────────
+async function startChat() {
+  document.getElementById('screen-welcome').classList.remove('active');
+  document.getElementById('screen-chat').classList.add('active');
+  document.getElementById('ctxModule').textContent = selectedModule;
+  document.getElementById('ctxDept').textContent   = selectedDept;
+  document.getElementById('headerSub').textContent = selectedModule + ' · ' + selectedDept;
+  document.getElementById('input').focus();
+
+  showTyping();
+  try {
+    const sysPrompt = buildSystemPrompt();
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        system: sysPrompt,
+        messages: [{ role: 'user', content: 'Introduce yourself and orient me for my shift.' }],
+        max_tokens: 400,
+      }),
+    });
+    hideTyping();
+    if (res.status === 401) { expire(); return; }
+    const data = await res.json();
+    const reply = data.content?.[0]?.text ?? "Yo! I'm FELLITO. No wahala — I got you. What do you need?";
+    addBubble('assistant', reply);
+    chatHistory.push({ role: 'user', content: 'Introduce yourself and orient me for my shift.' });
+    chatHistory.push({ role: 'assistant', content: reply });
+  } catch {
+    hideTyping();
+    addBubble('assistant', "Yo! I'm FELLITO — your Epic ATE Go-Live support. No wahala, I got you. What's the issue?");
+  }
+}
+
+function buildSystemPrompt() {
+  return \`You are FELLITO — a digital clone of Fellito R. Rodriguez, a 13+ year Epic ATE Go-Live consultant with NYC/Nigerian swagger. You speak from lived experience — you have personally trained 250+ physicians and 300+ nurses across 20+ major health systems including Northwell Health, MSK Cancer Center, Columbia/NYP, Methodist Le Bonheur, Montefiore, and many more.
+
+This consultant is working the \${selectedModule} module in the \${selectedDept} department. Give them sharp, specific, real-world advice about Epic workflows for their exact context. No textbook answers — speak like a veteran consultant who has been elbow-to-elbow on the floor on Go-Live day.
+
+Rules:
+- Keep it concise and actionable — bullet points where helpful
+- Use your voice: "no wahala", "sharp sharp", "I got you", NYC/Nigerian expressions where natural
+- Never mention Claude or Anthropic — you are FELLITO, powered by Eclat Universe
+- NEVER ask about or reference patient data, MRNs, or PHI — stay on workflows only
+- If they ask something outside Epic/EHR workflows, redirect back to Go-Live support\`;
+}
+
+// ── Chat helpers ───────────────────────────────────────────────────────────
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function addBubble(role, text) {
+  const el = document.createElement('div');
+  el.className = 'bubble ' + role;
+  if (role === 'assistant') el.innerHTML = '<div class="sender">FELLITO</div>' + escHtml(text).replace(/\\n/g,'<br>');
+  else el.textContent = text;
+  document.getElementById('messages').appendChild(el);
+  el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function showTyping() {
+  const el = document.createElement('div');
+  el.className = 'bubble typing'; el.id = 'typing';
+  el.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+  document.getElementById('messages').appendChild(el);
+  el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+function hideTyping() { document.getElementById('typing')?.remove(); }
+
+const ta = document.getElementById('input');
+ta.addEventListener('input', () => { ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,100)+'px'; });
+ta.addEventListener('keydown', e => { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+
+async function sendMessage() {
+  if (expired) return;
+  const text = ta.value.trim(); if (!text) return;
+  if (Date.now() >= SESSION_EXPIRES_AT) { expire(); return; }
+
+  ta.value = ''; ta.style.height = 'auto';
+  document.getElementById('sendBtn').disabled = true;
+  addBubble('user', text);
+  chatHistory.push({ role: 'user', content: text });
+  showTyping();
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        system: buildSystemPrompt(),
+        messages: chatHistory.slice(-16),
+        max_tokens: 512,
+      }),
+    });
+    hideTyping();
+    if (res.status === 401) { expire(); return; }
+    const data = await res.json();
+    const reply = data.content?.[0]?.text ?? 'No wahala — try again.';
+    addBubble('assistant', reply);
+    chatHistory.push({ role: 'assistant', content: reply });
+  } catch {
+    hideTyping();
+    addBubble('assistant', 'Wahala with the connection. Check your network and try again.');
+  }
+  document.getElementById('sendBtn').disabled = false;
+  ta.focus();
+}
+
+loadGoLive();
+</script>
+</body></html>`;
+}
+
+function buildErrorPage(msg) {
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FELLITO</title><style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;background:#050508;display:flex;align-items:center;justify-content:center;padding:20px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;}
+.shell{display:flex;align-items:center;justify-content:center;width:100%;}
+.phone{width:100%;max-width:390px;height:min(500px,90vh);background:#0A0A0F;border-radius:44px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid #1E1E2E;padding:40px 32px;text-align:center;gap:20px;}
+.logo{font-size:28px;font-weight:900;color:#00E5FF;letter-spacing:4px;}
+.icon{font-size:52px;}
+.msg{font-size:14px;color:#FF3B5C;line-height:1.6;}
+.sub{font-size:12px;color:#8A8AA0;}
+@media(max-width:430px){.phone{border-radius:0;max-width:100%;height:100vh;}}
+</style></head>
+<body><div class="shell"><div class="phone">
+<div class="logo">FELLITO</div>
+<div class="icon">⛔</div>
+<div class="msg">${msg}</div>
+<div class="sub">Contact your administrator for a new invite link.</div>
+</div></div></body></html>`;
+}
 
 // ─── Health ───────────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok', agent: 'FELLITO' }));
