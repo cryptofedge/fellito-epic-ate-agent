@@ -90,16 +90,19 @@ export default function GoLiveScreen({ navigation }: Props) {
     };
     addMessage(userMsg);
 
-    // Analyze message and evolve the style profile in the background
-    const currentProfile = useAppStore.getState().styleProfile;
-    const updatedProfile = analyzeMessage(
-      currentProfile,
-      text,
-      activeModule,
-      activeDepartment
-    );
-    setStyleProfile(updatedProfile);
-    saveStyleProfile(updatedProfile); // persist async, don't await
+    // Style learning — creator only. Regular users don't shape Fellito's persona.
+    let activeStyleProfile = useAppStore.getState().styleProfile;
+    if (isCreator) {
+      const updatedProfile = analyzeMessage(
+        activeStyleProfile,
+        text,
+        activeModule,
+        activeDepartment
+      );
+      setStyleProfile(updatedProfile);
+      saveStyleProfile(updatedProfile);
+      activeStyleProfile = updatedProfile;
+    }
 
     try {
       const result = await askFellito(
@@ -111,7 +114,7 @@ export default function GoLiveScreen({ navigation }: Props) {
         creatorOverrides,
         consultantProfile?.preferredLanguage ?? 'en',
         activeDepartment,
-        updatedProfile
+        isCreator ? activeStyleProfile : null
       );
 
       // If creator sent an override command, store it for future messages
@@ -129,7 +132,7 @@ export default function GoLiveScreen({ navigation }: Props) {
       addMessage(assistantMsg);
 
       if (isVoiceMode) {
-        await speakAsFellito(result.text);
+        await speakAsFellito(result.text, isCreator);
       }
     } catch (err) {
       const errMsg: ChatMessage = {

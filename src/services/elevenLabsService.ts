@@ -75,11 +75,12 @@ function buildVoiceSettings(profile: StyleProfile | null): VoiceSettings {
 
 let currentSound: Audio.Sound | null = null;
 
-export async function speakAsFellito(text: string): Promise<void> {
+export async function speakAsFellito(text: string, isCreator = false): Promise<void> {
   const store = useAppStore.getState();
   store.setFellitoSpeaking(true);
 
-  const voiceSettings = buildVoiceSettings(store.styleProfile);
+  // Adaptive voice only for the creator — other users get the base voice
+  const voiceSettings = isCreator ? buildVoiceSettings(store.styleProfile) : BASE_VOICE;
 
   try {
     // Stop any current playback
