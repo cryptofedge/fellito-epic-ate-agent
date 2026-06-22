@@ -670,9 +670,14 @@ async function loadGoLive() {
   const sel = document.createElement('select');
   sel.style.cssText = 'width:100%;background:#0A0A0F;border:1px solid #2A2A3E;border-radius:12px;color:#fff;font-size:14px;padding:12px 16px;outline:none;font-family:inherit;cursor:pointer;';
 
+  if (!list.length) {
+    glc.innerHTML = '<div style="color:#FF3B5C;font-size:13px;padding:10px 0;">No active Go-Lives available. Contact your admin.</div>';
+    return;
+  }
+
   const placeholder = document.createElement('option');
   placeholder.value = '';
-  placeholder.textContent = list.length ? 'Select your Go-Live...' : 'No active Go-Lives — type name below';
+  placeholder.textContent = 'Select your Go-Live...';
   placeholder.disabled = true;
   placeholder.selected = true;
   sel.appendChild(placeholder);
@@ -680,7 +685,7 @@ async function loadGoLive() {
   list.forEach(gl => {
     const opt = document.createElement('option');
     opt.value = gl.id;
-    opt.textContent = gl.name + (gl.startDate ? '  (' + gl.startDate + ')' : '');
+    opt.textContent = gl.name;
     if (GOLIVE_ID && gl.id === GOLIVE_ID) {
       opt.selected = true;
       selectedGoLive   = gl.name;
@@ -689,27 +694,7 @@ async function loadGoLive() {
     sel.appendChild(opt);
   });
 
-  // Always add a "Other / Manual entry" option
-  const other = document.createElement('option');
-  other.value = '__other__';
-  other.textContent = '✏️  Other — enter manually';
-  sel.appendChild(other);
-
   sel.addEventListener('change', function() {
-    if (this.value === '__other__') {
-      glc.innerHTML = '';
-      const inp = document.createElement('input');
-      inp.placeholder = 'Type your Go-Live name...';
-      inp.style.cssText = 'width:100%;background:#0A0A0F;border:1px solid #FF8C00;border-radius:12px;color:#fff;font-size:14px;padding:12px 16px;outline:none;font-family:inherit;';
-      glc.appendChild(inp);
-      inp.focus();
-      inp.addEventListener('input', function() {
-        selectedGoLive   = this.value.trim();
-        selectedGoLiveId = 'manual';
-        checkReady();
-      });
-      return;
-    }
     const chosen = list.find(g => g.id === this.value);
     if (chosen) {
       selectedGoLive   = chosen.name;
