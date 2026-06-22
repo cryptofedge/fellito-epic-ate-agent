@@ -255,6 +255,56 @@ app.post('/api/rag/ingest', requireAuth, upload.single('file'), async (req, res)
   }
 });
 
+// ─── Upload screenshot / tip sheet ───────────────────────────────────────────
+app.post('/api/upload', requireAuth, upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  const { goLiveId, moduleTag, goLive } = req.body;
+  const ext = path.extname(req.file.originalname).toLowerCase();
+  const sessionId = goLiveId || 'standby';
+
+  try {
+    let extractedText = '';
+
+    if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) {
+      // Use Claude Vision to extract content from the image
+      const imageData = fs.readFileSync(req.file.path);
+      const base64 = imageData.toString('base64');
+      const mediaType = ext === '.png' ? 'image/png' : ext === '.gif' ? 'image/gif' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+
+      const visionRes = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+            { type: 'text', text: 'You are extracting content from an Epic EHR Go-Live tip sheet or screenshot. Extract ALL visible text exactly as shown. Also describe any workflow steps, buttons, menu paths, or instructions you see. Be thorough — this will be used to answer Epic workflow questions for consultants on the floor.' }
+          ]
+        }]
+      });
+      extractedText = '[Screenshot: ' + req.file.originalname + ']\n' + (visionRes.content[0]?.text || '');
+    } else {
+      // PDF or text — use existing RAG ingest
+      const result = await ingestDocument(req.file.path, req.file.originalname, sessionId, moduleTag || null);
+      fs.unlink(req.file.path, () => {});
+      return res.json({ ok: true, type: 'pdf', ...result });
+    }
+
+    // Store vision-extracted text as a temp file and ingest
+    const tmpPath = req.file.path + '.txt';
+    fs.writeFileSync(tmpPath, extractedText, 'utf8');
+    const result = await ingestDocument(tmpPath, req.file.originalname, sessionId, moduleTag || null);
+    fs.unlink(req.file.path, () => {});
+    fs.unlink(tmpPath, () => {});
+
+    res.json({ ok: true, type: 'image', preview: extractedText.slice(0, 200), ...result });
+  } catch (err) {
+    fs.unlink(req.file.path, () => {});
+    console.error('[Upload]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── RAG: Query (requires auth) ───────────────────────────────────────────────
 app.post('/api/rag/query', requireAuth, async (req, res) => {
   const { question, sessionId, topK, moduleTag } = req.body;
@@ -644,6 +694,10 @@ textarea::placeholder{color:#8A8AA0;}
       <button onclick="triggerDowntime()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#FFB800;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">⏳ Downtime</button>
     </div>
     <div class="input-bar">
+      <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none" onchange="handleUpload(this)">
+      <button onclick="document.getElementById('fileInput').click()" title="Upload screenshot or tip sheet" style="background:none;border:none;color:#8A8AA0;cursor:pointer;padding:0 6px;display:flex;align-items:center;flex-shrink:0;" id="uploadBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+      </button>
       <div class="input-wrap">
         <textarea id="input" placeholder="Ask FELLITO anything..." rows="1"></textarea>
       </div>
@@ -858,6 +912,56 @@ function triggerDowntime() {
   var msg = 'It is slow on the floor right now. Give me specific things I can do right now to look productive, add value, and stay sharp during this downtime — things that will actually help me and the team.';
   document.getElementById('userInput').value = msg;
   sendMessage();
+}
+
+// ── Upload screenshot / tip sheet ──────────────────────────────────────────
+async function handleUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  const maxMB = 5;
+  if (file.size > maxMB * 1024 * 1024) {
+    addBubble('assistant', 'File too large — keep it under 5MB.');
+    return;
+  }
+
+  const uploadBtn = document.getElementById('uploadBtn');
+  uploadBtn.style.color = '#FFB800';
+  uploadBtn.style.pointerEvents = 'none';
+
+  addBubble('user', '📎 ' + file.name);
+  showTyping();
+
+  const form = new FormData();
+  form.append('file', file);
+  form.append('goLiveId', selectedGoLiveId || '');
+  form.append('moduleTag', selectedModule || '');
+  form.append('goLive', selectedGoLive || '');
+
+  try {
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + TOKEN },
+      body: form,
+    });
+    hideTyping();
+    const data = await res.json();
+    if (!res.ok) {
+      addBubble('assistant', 'Upload failed — ' + (data.error || 'try again.'));
+    } else {
+      const type = data.type === 'image' ? 'screenshot' : 'tip sheet';
+      const preview = data.preview ? " Here's what I picked up: " + data.preview + '...' : '';
+      addBubble('assistant', 'Got it — that ' + type + ' is locked in for this Go-Live.' + preview + ' Ask me anything about it.');
+      chatHistory.push({ role: 'assistant', content: 'File uploaded: ' + file.name });
+    }
+  } catch {
+    hideTyping();
+    addBubble('assistant', 'Upload failed — connection issue.');
+  }
+
+  uploadBtn.style.color = '#8A8AA0';
+  uploadBtn.style.pointerEvents = 'auto';
 }
 
 // ── Nearby ─────────────────────────────────────────────────────────────────
