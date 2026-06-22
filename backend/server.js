@@ -647,9 +647,17 @@ function expire() {
 
 // ── Load Go-Live info + render all selection chips ─────────────────────────
 async function loadGoLive() {
+  // Render modules and depts immediately — never block on Go-Live fetch
+  renderModules();
+  renderDepts();
+
+  // Fetch Go-Lives with a 5s timeout so it never hangs forever
   let lives = [];
   try {
-    const res = await fetch('/api/golives', { headers: { Authorization: 'Bearer ' + TOKEN } });
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch('/api/golives', { headers: { Authorization: 'Bearer ' + TOKEN }, signal: controller.signal });
+    clearTimeout(tid);
     if (res.ok) lives = await res.json();
   } catch {}
 
@@ -712,9 +720,11 @@ async function loadGoLive() {
 
   glc.appendChild(sel);
   if (selectedGoLive) checkReady();
+}
 
-  // Render module chips
+function renderModules() {
   const mc = document.getElementById('moduleChips');
+  mc.innerHTML = '';
   ALL_MODULES.forEach(m => {
     const c = document.createElement('div');
     c.className = 'chip'; c.textContent = m;
@@ -726,9 +736,11 @@ async function loadGoLive() {
     };
     mc.appendChild(c);
   });
+}
 
-  // Render department chips
+function renderDepts() {
   const dc = document.getElementById('deptChips');
+  dc.innerHTML = '';
   ALL_DEPTS.forEach(d => {
     const c = document.createElement('div');
     c.className = 'chip'; c.textContent = d;
@@ -740,8 +752,6 @@ async function loadGoLive() {
     };
     dc.appendChild(c);
   });
-
-  checkReady();
 }
 
 function checkReady() {
