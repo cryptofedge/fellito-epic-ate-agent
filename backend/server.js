@@ -1070,9 +1070,15 @@ function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'
 function addBubble(role, text) {
   const el = document.createElement('div');
   el.className = 'bubble ' + role;
-  if (role === 'assistant') el.innerHTML = '<div class="sender">FELLITO</div>' + escHtml(text).replace(/\\n/g,'<br>');
+  if (role === 'assistant') el.innerHTML = '<div class="sender">FELLITO</div><span class="bubble-text">' + escHtml(text).replace(/\\n/g,'<br>') + '</span>';
   else el.textContent = text;
   document.getElementById('messages').appendChild(el);
+  el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return el;
+}
+function updateBubble(el, text) {
+  const span = el.querySelector('.bubble-text');
+  if (span) span.innerHTML = escHtml(text).replace(/\\n/g,'<br>');
   el.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
 
@@ -1136,7 +1142,7 @@ async function sendMessage() {
           const { text } = JSON.parse(payload);
           fullReply += text;
           if (!bubble) bubble = addBubble('assistant', fullReply);
-          else bubble.querySelector('p').textContent = fullReply;
+          else updateBubble(bubble, fullReply);
         } catch {}
       }
     }
