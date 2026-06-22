@@ -652,39 +652,71 @@
     50% { opacity: 0; }
   }
 
-  /* ─── MODULES ─────────────────────────────────────────────── */
+  /* ─── MODULES / AGENTS ─────────────────────────────────────── */
   .modules-section { background: var(--bg-deep); }
 
-  .modules-grid {
+  .agents-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 16px;
   }
-  .module-pill {
+  .agent-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px 16px;
-    text-align: center;
+    border-radius: 16px;
+    padding: 22px 18px;
     transition: all 0.25s;
-    cursor: default;
+    position: relative;
+    overflow: hidden;
   }
-  .module-pill:hover {
-    border-color: var(--orange);
-    background: var(--orange-glow);
-    transform: scale(1.04);
+  .agent-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--orange), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
   }
-  .module-name {
-    font-size: 15px;
+  .agent-card:hover {
+    border-color: var(--border-bright);
+    background: var(--bg-card-hover);
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+  }
+  .agent-card:hover::before { opacity: 1; }
+  .agent-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .agent-badge {
+    font-size: 9px;
     font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 4px;
+    letter-spacing: 0.1em;
+    color: var(--orange);
+    background: var(--orange-glow);
+    border: 1px solid rgba(255,140,0,0.3);
+    border-radius: 4px;
+    padding: 2px 7px;
   }
-  .module-sub {
+  .agent-module {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-primary);
+  }
+  .agent-full {
     font-size: 11px;
     color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.07em;
+    margin-bottom: 10px;
+  }
+  .agent-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.6;
   }
 
   /* ─── SECURITY ────────────────────────────────────────────── */
@@ -1130,7 +1162,7 @@
     .pain-grid { grid-template-columns: repeat(2, 1fr); }
     .steps-grid { grid-template-columns: repeat(2, 1fr); }
     .features-grid { grid-template-columns: repeat(2, 1fr); }
-    .modules-grid { grid-template-columns: repeat(3, 1fr); }
+    .agents-grid { grid-template-columns: repeat(3, 1fr); }
     .tech-grid { grid-template-columns: repeat(2, 1fr); }
     .usecases-grid { grid-template-columns: 1fr; }
     .demo-grid { grid-template-columns: 1fr; }
@@ -1152,7 +1184,7 @@
     .steps-grid { grid-template-columns: 1fr; }
     .steps-grid::before { display: none; }
     .features-grid { grid-template-columns: 1fr; }
-    .modules-grid { grid-template-columns: repeat(2, 1fr); }
+    .agents-grid { grid-template-columns: repeat(2, 1fr); }
     .tech-grid { grid-template-columns: repeat(2, 1fr); }
     .footer-inner { grid-template-columns: 1fr; }
   }
@@ -1323,14 +1355,14 @@
 
       <div class="feature-card featured">
         <div class="feature-icon">🤖</div>
-        <div class="feature-title">AI-Powered Epic Expert</div>
+        <div class="feature-title">10 Dedicated Module Agents</div>
         <p class="feature-text">
-          Powered by Claude Sonnet 4.6 — one of the most capable AI models available — with a system prompt trained on 13 years of Epic Go-Live experience. Knows every module, every workflow, every shortcut.
+          Every Epic module gets its own specialized AI agent — not a generic chatbot. The FELLITO CPOE Agent knows order entry cold. The FELLITO ASAP Agent lives in the ED. Each agent has deep, module-specific expertise built in from day one, powered by Claude Sonnet 4.6.
         </p>
         <div class="feature-tags">
           <span class="tag">Claude AI</span>
-          <span class="tag">Context-Aware</span>
-          <span class="tag">Module-Specific</span>
+          <span class="tag">Per-Module</span>
+          <span class="tag">Always Global</span>
         </div>
       </div>
 
@@ -1484,50 +1516,90 @@
 <section class="modules-section" id="modules">
   <div class="section-inner">
     <div class="fade-in" style="text-align: center; margin-bottom: 60px;">
-      <div class="section-tag" style="display: inline-block;">Epic Coverage</div>
-      <h2 class="section-title">Every Module.<br/><span>Every Department.</span></h2>
-      <p class="section-body" style="margin: 0 auto;">FELLITO knows every major Epic clinical module and can be scoped to any department — so answers are always specific to the consultant's exact context.</p>
+      <div class="section-tag" style="display: inline-block;">10 Dedicated Agents</div>
+      <h2 class="section-title">One Agent Per Module.<br/><span>All Modules. Always.</span></h2>
+      <p class="section-body" style="margin: 0 auto;">Each Epic module has its own FELLITO agent — purpose-built with deep workflow expertise for that module only. Not scoped to a single Go-Live. Available on every activation, forever.</p>
     </div>
-    <div class="modules-grid fade-in">
-      <div class="module-pill">
-        <div class="module-name">ClinDoc</div>
-        <div class="module-sub">Clinical Documentation</div>
+    <div class="agents-grid fade-in">
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-badge">AGENT 01</div>
+          <div class="agent-module">ClinDoc</div>
+        </div>
+        <div class="agent-full">Clinical Documentation</div>
+        <p class="agent-desc">Flowsheets, SmartText, note types, AVS, downtime documentation, Dragon integration.</p>
       </div>
-      <div class="module-pill">
-        <div class="module-name">CPOE</div>
-        <div class="module-sub">Order Entry</div>
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-badge">AGENT 02</div>
+          <div class="agent-module">CPOE</div>
+        </div>
+        <div class="agent-full">Computerized Provider Order Entry</div>
+        <p class="agent-desc">Order sets, preference lists, med rec, cosign/verbal orders, downtime reconciliation.</p>
       </div>
-      <div class="module-pill">
-        <div class="module-name">ASAP</div>
-        <div class="module-sub">Emergency</div>
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-badge">AGENT 03</div>
+          <div class="agent-module">ASAP</div>
+        </div>
+        <div class="agent-full">Emergency Department</div>
+        <p class="agent-desc">ED tracking board, triage, fast tracks, disposition workflows, LWBS documentation.</p>
       </div>
-      <div class="module-pill">
-        <div class="module-name">Beacon</div>
-        <div class="module-sub">Oncology</div>
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-badge">AGENT 04</div>
+          <div class="agent-module">Beacon</div>
+        </div>
+        <div class="agent-full">Oncology</div>
+        <p class="agent-desc">Chemo protocols, treatment plans, cycle management, BSA/AUC dosing, infusion scheduling.</p>
       </div>
-      <div class="module-pill">
-        <div class="module-name">Beaker</div>
-        <div class="module-sub">Lab</div>
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-badge">AGENT 05</div>
+          <div class="agent-module">Beaker</div>
+        </div>
+        <div class="agent-full">Laboratory</div>
+        <p class="agent-desc">Specimen workflows, result release, critical value routing, reflex testing, POC integration.</p>
       </div>
-      <div class="module-pill">
-        <div class="module-name">ADT</div>
-        <div class="module-sub">Admissions</div>
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-badge">AGENT 06</div>
+          <div class="agent-module">ADT</div>
+        </div>
+        <div class="agent-full">Admissions, Discharge & Transfers</div>
+        <p class="agent-desc">Bed management, admission/transfer/discharge workflows, census, duplicate MRN issues.</p>
       </div>
-      <div class="module-pill">
-        <div class="module-name">OpTime</div>
-        <div class="module-sub">Surgical</div>
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-badge">AGENT 07</div>
+          <div class="agent-module">OpTime</div>
+        </div>
+        <div class="agent-full">Surgical & Perioperative</div>
+        <p class="agent-desc">OR scheduling, surgical case records, preference cards, PACU handoff, implant tracking.</p>
       </div>
-      <div class="module-pill">
-        <div class="module-name">Prelude</div>
-        <div class="module-sub">Registration</div>
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-badge">AGENT 08</div>
+          <div class="agent-module">Prelude</div>
+        </div>
+        <div class="agent-full">Patient Registration</div>
+        <p class="agent-desc">MPI search, insurance verification, guarantor setup, MyChart activation, duplicate prevention.</p>
       </div>
-      <div class="module-pill">
-        <div class="module-name">Radiant</div>
-        <div class="module-sub">Radiology</div>
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-badge">AGENT 09</div>
+          <div class="agent-module">Radiant</div>
+        </div>
+        <div class="agent-full">Radiology</div>
+        <p class="agent-desc">Order routing, exam scheduling, protocoling, PACS integration, result release workflows.</p>
       </div>
-      <div class="module-pill">
-        <div class="module-name">MyChart</div>
-        <div class="module-sub">Patient Portal</div>
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-badge">AGENT 10</div>
+          <div class="agent-module">MyChart</div>
+        </div>
+        <div class="agent-full">Patient Portal</div>
+        <p class="agent-desc">Account activation, proxy access, messaging routing, result release settings, video visits.</p>
       </div>
     </div>
   </div>
