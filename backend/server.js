@@ -416,9 +416,9 @@ html,body{height:100%;background:#050508;color:#fff;font-family:-apple-system,Bl
 
 /* header */
 .header{background:#12121A;padding:10px 16px 12px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #1E1E2E;flex-shrink:0;}
-.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#FF8C00,#0070FF);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#000;flex-shrink:0;}
+.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#00E5FF,#0070FF);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#000;flex-shrink:0;}
 .header-info{flex:1;min-width:0;}
-.header-name{font-size:15px;font-weight:800;color:#FF8C00;letter-spacing:1px;}
+.header-name{font-size:15px;font-weight:800;color:#00E5FF;letter-spacing:1px;}
 .header-sub{font-size:10px;color:#8A8AA0;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .timer-pill{background:rgba(255,184,0,0.15);border:1px solid #FFB800;border-radius:20px;padding:4px 10px;display:flex;align-items:center;gap:4px;flex-shrink:0;}
 .timer-text{font-size:12px;font-weight:800;color:#FFB800;font-family:'Courier New',monospace;}
@@ -430,37 +430,37 @@ html,body{height:100%;background:#050508;color:#fff;font-family:-apple-system,Bl
 /* welcome screen */
 .welcome-body{flex:1;overflow-y:auto;padding:24px 20px;display:flex;flex-direction:column;gap:16px;}
 .welcome-body::-webkit-scrollbar{width:0;}
-.golive-card{background:#12121A;border:1px solid #FF8C00;border-radius:16px;padding:18px;}
-.golive-tag{font-size:10px;color:#FF8C00;font-weight:700;letter-spacing:2px;margin-bottom:6px;}
+.golive-card{background:#12121A;border:1px solid #00E5FF;border-radius:16px;padding:18px;}
+.golive-tag{font-size:10px;color:#00E5FF;font-weight:700;letter-spacing:2px;margin-bottom:6px;}
 .golive-name{font-size:17px;font-weight:800;color:#fff;margin-bottom:4px;}
 .golive-dates{font-size:12px;color:#8A8AA0;}
 .section-title{font-size:11px;color:#8A8AA0;font-weight:700;letter-spacing:2px;margin-bottom:10px;}
 .chip-grid{display:flex;flex-wrap:wrap;gap:8px;}
 .chip{background:#12121A;border:1px solid #1E1E2E;border-radius:20px;padding:8px 14px;font-size:13px;color:#fff;cursor:pointer;transition:all .15s;}
-.chip:active,.chip.selected{background:#FF8C00;color:#000;border-color:#FF8C00;font-weight:700;}
+.chip:active,.chip.selected{background:#00E5FF;color:#000;border-color:#00E5FF;font-weight:700;}
 .welcome-footer{background:#12121A;border-top:1px solid #1E1E2E;padding:14px 20px;flex-shrink:0;padding-bottom:max(14px,env(safe-area-inset-bottom));}
-.start-btn{width:100%;background:#FF8C00;color:#000;font-size:15px;font-weight:800;border:none;border-radius:14px;padding:14px;cursor:pointer;letter-spacing:1px;transition:opacity .15s;}
+.start-btn{width:100%;background:#00E5FF;color:#000;font-size:15px;font-weight:800;border:none;border-radius:14px;padding:14px;cursor:pointer;letter-spacing:1px;transition:opacity .15s;}
 .start-btn:disabled{opacity:.4;cursor:not-allowed;}
 
 /* chat screen */
 .messages{flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;}
 .messages::-webkit-scrollbar{width:0;}
 .bubble{max-width:82%;padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.5;word-break:break-word;}
-.bubble.user{background:#FF8C00;color:#000;font-weight:600;border-bottom-right-radius:4px;align-self:flex-end;}
+.bubble.user{background:#00E5FF;color:#000;font-weight:600;border-bottom-right-radius:4px;align-self:flex-end;}
 .bubble.assistant{background:#1E1E2E;color:#fff;border-bottom-left-radius:4px;align-self:flex-start;border:1px solid #2A2A3E;}
-.bubble.assistant .sender{font-size:10px;font-weight:800;color:#FF8C00;letter-spacing:1px;margin-bottom:4px;}
+.bubble.assistant .sender{font-size:10px;font-weight:800;color:#00E5FF;letter-spacing:1px;margin-bottom:4px;}
 .bubble.typing{background:#1E1E2E;border:1px solid #2A2A3E;align-self:flex-start;}
 .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#8A8AA0;animation:blink 1.2s infinite;}
 .dot:nth-child(2){animation-delay:.2s;}.dot:nth-child(3){animation-delay:.4s;}
 @keyframes blink{0%,80%,100%{opacity:.3;}40%{opacity:1;}}
 .context-bar{background:#12121A;border-bottom:1px solid #1E1E2E;padding:6px 16px;display:flex;gap:8px;flex-shrink:0;}
 .ctx-chip{background:#0A0A0F;border:1px solid #1E1E2E;border-radius:12px;padding:4px 10px;font-size:11px;color:#8A8AA0;}
-.ctx-chip span{color:#FF8C00;font-weight:700;}
+.ctx-chip span{color:#00E5FF;font-weight:700;}
 .input-bar{background:#12121A;border-top:1px solid #1E1E2E;padding:10px 12px;display:flex;align-items:flex-end;gap:8px;flex-shrink:0;padding-bottom:max(10px,env(safe-area-inset-bottom));}
 .input-wrap{flex:1;background:#0A0A0F;border:1px solid #1E1E2E;border-radius:22px;padding:10px 16px;}
 textarea{width:100%;background:transparent;border:none;outline:none;color:#fff;font-size:14px;resize:none;max-height:100px;font-family:inherit;line-height:1.4;}
 textarea::placeholder{color:#8A8AA0;}
-.send-btn{width:40px;height:40px;border-radius:50%;background:#FF8C00;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.send-btn{width:40px;height:40px;border-radius:50%;background:#00E5FF;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .send-btn svg{fill:#000;}
 .send-btn:disabled{background:#1E1E2E;cursor:not-allowed;}
 .send-btn:disabled svg{fill:#8A8AA0;}
@@ -500,7 +500,7 @@ textarea::placeholder{color:#8A8AA0;}
       <div class="header-sub" id="headerSub">${name} · Epic ATE Support</div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
-      <button onclick="openNearby()" title="What's nearby?" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:20px;color:#FF8C00;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:5px;">
+      <button onclick="openNearby()" title="What's nearby?" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:20px;color:#00E5FF;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:5px;">
         📍 Nearby
       </button>
       <div class="timer-pill">
@@ -572,7 +572,7 @@ textarea::placeholder{color:#8A8AA0;}
   <!-- ── SCREEN 2: Chat ── -->
   <div class="screen" id="screen-chat">
     <div class="context-bar">
-      <div class="ctx-chip"><span id="ctxGoLive" style="color:#FF8C00;font-weight:700;">—</span></div>
+      <div class="ctx-chip"><span id="ctxGoLive" style="color:#00E5FF;font-weight:700;">—</span></div>
       <div class="ctx-chip">Module: <span id="ctxModule">—</span></div>
       <div class="ctx-chip">Dept: <span id="ctxDept">—</span></div>
     </div>
@@ -634,7 +634,7 @@ function updateTimer() {
   const pill = document.querySelector('.timer-pill');
   const txt  = document.getElementById('countdown');
   if (ms < 120000)      { pill.style.borderColor='#FF3B5C'; pill.style.background='rgba(255,59,92,.15)'; txt.style.color='#FF3B5C'; }
-  else if (ms < 300000) { pill.style.borderColor='#FF8C00'; pill.style.background='rgba(255,140,0,.15)'; txt.style.color='#FF8C00'; }
+  else if (ms < 300000) { pill.style.borderColor='#00E5FF'; pill.style.background='rgba(255,140,0,.15)'; txt.style.color='#00E5FF'; }
 }
 updateTimer(); setInterval(updateTimer, 1000);
 
@@ -797,27 +797,14 @@ Rules:
 - Never mention Claude or Anthropic — you are FELLITO, powered by Eclat Universe
 - If they ask something outside Epic/EHR workflows, redirect back to Go-Live support
 
-\${selectedModule === 'CPOE' ? \`
-📋 CPOE MODULE — NOTES GUIDANCE ENABLED:
-This consultant is working CPOE. They are allowed to ask about Epic note workflows including:
-- How to open, create, and sign notes (progress notes, nursing notes, H&P, procedure notes, discharge summaries)
-- Note types available in CPOE and when to use each
-- SmartText, SmartPhrase, and dot-phrase usage (.hpi, .ros, .exam etc.)
-- Cosign, addendum, and note routing workflows
-- Note status (In Progress, Signed, Addendum) and how to manage them
-- Common note-related issues on Go-Live day and how to fix them
-- How to pull forward previous notes or use note templates
-Answer all note workflow questions fully and with real-world Go-Live context. These are documentation WORKFLOWS — not patient data. No wahala.
-\` : ''}\`
-
-🚨 PHI HARD BLOCK — NON-NEGOTIABLE:
-If the user's message contains or appears to contain ANY of the following, REFUSE IMMEDIATELY and do not engage with the content:
+PHI HARD BLOCK - NON-NEGOTIABLE:
+If the user message contains or appears to contain ANY of the following, REFUSE IMMEDIATELY:
 - Patient names, MRNs, DOBs, SSNs, insurance IDs, or any patient identifiers
 - Clinical records, chart notes, lab results, medication lists, or diagnoses
 - Any Protected Health Information (PHI) in any form
+Respond ONLY with: "STOP - I cannot process patient information. FELLITO is a workflow support tool only. Never enter patient names, MRNs, charts, or any PHI here. Ask me about Epic workflows and I will help you sharp sharp."
 
-When PHI is detected, respond ONLY with:
-"⛔ STOP — I cannot process patient information. FELLITO is a workflow support tool only. Never enter patient names, MRNs, charts, or any PHI here. Ask me about Epic workflows and I'll help you sharp sharp."\`;
+\${selectedModule === 'CPOE' ? 'CPOE MODULE - NOTES GUIDANCE ENABLED: This consultant is working CPOE. They are allowed to ask about Epic note workflows including: how to open/create/sign notes (progress notes, nursing notes, H&P, procedure notes, discharge summaries), note types in CPOE and when to use each, SmartText/SmartPhrase/dot-phrase usage (.hpi, .ros, .exam etc.), cosign/addendum/note routing workflows, note status (In Progress, Signed, Addendum), common note issues on Go-Live day, pulling forward previous notes or using note templates. Answer all note workflow questions fully with real-world Go-Live context. These are documentation WORKFLOWS, not patient data. No wahala.' : ''}\`;
 }
 
 // ── Nearby ─────────────────────────────────────────────────────────────────
@@ -859,9 +846,9 @@ async function fetchNearby(cat) {
   document.querySelectorAll('[id^="ncat"]').forEach(b => {
     b.style.background = '#0A0A0F'; b.style.color = '#8A8AA0'; b.style.borderColor = '#2A2A3E';
   });
-  event.target.style.background = '#FF8C0022';
-  event.target.style.color = '#FF8C00';
-  event.target.style.borderColor = '#FF8C00';
+  event.target.style.background = '#00E5FF22';
+  event.target.style.color = '#00E5FF';
+  event.target.style.borderColor = '#00E5FF';
 
   const el = document.getElementById('nearbyResults');
   if (!nearbyCoords) {
@@ -901,11 +888,11 @@ async function fetchNearby(cat) {
       return '<div style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:14px;padding:14px;margin-bottom:10px;">'
         + '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
         + '<div style="font-size:14px;font-weight:700;color:#fff;flex:1;">' + name + '</div>'
-        + '<div style="font-size:11px;color:#FF8C00;font-weight:700;margin-left:8px;flex-shrink:0;">' + dist + 'm</div>'
+        + '<div style="font-size:11px;color:#00E5FF;font-weight:700;margin-left:8px;flex-shrink:0;">' + dist + 'm</div>'
         + '</div>'
         + (street ? '<div style="font-size:12px;color:#8A8AA0;margin-top:3px;">' + street + '</div>' : '')
         + (phone  ? '<div style="font-size:12px;color:#8A8AA0;">' + phone + '</div>' : '')
-        + '<a href="' + mapsUrl + '" target="_blank" style="display:inline-block;margin-top:8px;font-size:11px;font-weight:700;color:#FF8C00;text-decoration:none;background:#FF8C0015;border:1px solid #FF8C0044;border-radius:8px;padding:4px 10px;">Open in Maps →</a>'
+        + '<a href="' + mapsUrl + '" target="_blank" style="display:inline-block;margin-top:8px;font-size:11px;font-weight:700;color:#00E5FF;text-decoration:none;background:#00E5FF15;border:1px solid #00E5FF44;border-radius:8px;padding:4px 10px;">Open in Maps →</a>'
         + '</div>';
     }).join('');
   } catch {
@@ -1091,7 +1078,7 @@ function buildErrorPage(msg) {
 html,body{height:100%;background:#050508;display:flex;align-items:center;justify-content:center;padding:20px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;}
 .shell{display:flex;align-items:center;justify-content:center;width:100%;}
 .phone{width:100%;max-width:390px;height:min(500px,90vh);background:#0A0A0F;border-radius:44px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid #1E1E2E;padding:40px 32px;text-align:center;gap:20px;}
-.logo{font-size:28px;font-weight:900;color:#FF8C00;letter-spacing:4px;}
+.logo{font-size:28px;font-weight:900;color:#00E5FF;letter-spacing:4px;}
 .icon{font-size:52px;}
 .msg{font-size:14px;color:#FF3B5C;line-height:1.6;}
 .sub{font-size:12px;color:#8A8AA0;}
@@ -1138,14 +1125,14 @@ app.get('/', (_req, res) => {
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:#0A0A0F;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
 .card{width:100%;max-width:420px;text-align:center;}
-.logo{font-size:48px;font-weight:900;color:#FF8C00;letter-spacing:8px;margin-bottom:6px;}
+.logo{font-size:48px;font-weight:900;color:#00E5FF;letter-spacing:8px;margin-bottom:6px;}
 .sub{font-size:12px;color:#8A8AA0;letter-spacing:3px;text-transform:uppercase;margin-bottom:4px;}
 .powered{font-size:11px;color:#3A3A5A;margin-bottom:48px;}
 .label{font-size:13px;color:#8A8AA0;margin-bottom:12px;line-height:1.6;}
 input{width:100%;background:#12121A;border:1px solid #1E1E2E;border-radius:14px;color:#fff;font-size:14px;padding:14px 18px;outline:none;margin-bottom:12px;transition:border .2s;}
-input:focus{border-color:#FF8C00;}
+input:focus{border-color:#00E5FF;}
 input::placeholder{color:#3A3A5A;}
-button{width:100%;background:#FF8C00;color:#000;font-size:15px;font-weight:800;letter-spacing:1px;border:none;border-radius:14px;padding:16px;cursor:pointer;transition:opacity .2s;}
+button{width:100%;background:#00E5FF;color:#000;font-size:15px;font-weight:800;letter-spacing:1px;border:none;border-radius:14px;padding:16px;cursor:pointer;transition:opacity .2s;}
 button:hover{opacity:.9;}
 .err{color:#FF3B5C;font-size:13px;margin-top:12px;display:none;}
 .divider{border:none;border-top:1px solid #1E1E2E;margin:32px 0;}
