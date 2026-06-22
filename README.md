@@ -121,6 +121,8 @@ FELLITO never sees:
 
 ## License & Brand
 
+<img src="docs/eclat-logo.png" alt="Eclat Universe Logo" width="100"/>
+
 **FEDGE 2.O | Powered by Rafael Fellito Rodriguez and Eclat Universe**
 
 © 2026 FEDGE 2.O. All rights reserved.
