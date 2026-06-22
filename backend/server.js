@@ -653,36 +653,65 @@ async function loadGoLive() {
     if (res.ok) lives = await res.json();
   } catch {}
 
-  // Render Go-Live chips
+  // Render Go-Live dropdown
   const glc = document.getElementById('goLiveChips');
   glc.innerHTML = '';
   const active = lives.filter(g => g.active);
   const list   = active.length ? active : lives;
 
-  if (!list.length) {
-    glc.innerHTML = '<div style="color:#FF3B5C;font-size:13px;">No active Go-Lives found. Contact admin.</div>';
-  } else {
-    list.forEach(gl => {
-      const c = document.createElement('div');
-      c.className = 'chip';
-      c.textContent = gl.name;
-      if (gl.startDate && gl.endDate) c.title = gl.startDate + ' → ' + gl.endDate;
-      c.onclick = () => {
-        glc.querySelectorAll('.chip').forEach(x => x.classList.remove('selected'));
-        c.classList.add('selected');
-        selectedGoLive   = gl.name;
-        selectedGoLiveId = gl.id;
+  const sel = document.createElement('select');
+  sel.style.cssText = 'width:100%;background:#0A0A0F;border:1px solid #2A2A3E;border-radius:12px;color:#fff;font-size:14px;padding:12px 16px;outline:none;font-family:inherit;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'8\' viewBox=\'0 0 12 8\'%3E%3Cpath d=\'M1 1l5 5 5-5\' stroke=\'%238A8AA0\' stroke-width=\'1.5\' fill=\'none\' stroke-linecap=\'round\'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center;';
+
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = list.length ? 'Select your Go-Live...' : 'No active Go-Lives — type name below';
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  sel.appendChild(placeholder);
+
+  list.forEach(gl => {
+    const opt = document.createElement('option');
+    opt.value = gl.id;
+    opt.textContent = gl.name + (gl.startDate ? '  (' + gl.startDate + ')' : '');
+    if (GOLIVE_ID && gl.id === GOLIVE_ID) {
+      opt.selected = true;
+      selectedGoLive   = gl.name;
+      selectedGoLiveId = gl.id;
+    }
+    sel.appendChild(opt);
+  });
+
+  // Always add a "Other / Manual entry" option
+  const other = document.createElement('option');
+  other.value = '__other__';
+  other.textContent = '✏️  Other — enter manually';
+  sel.appendChild(other);
+
+  sel.addEventListener('change', function() {
+    if (this.value === '__other__') {
+      glc.innerHTML = '';
+      const inp = document.createElement('input');
+      inp.placeholder = 'Type your Go-Live name...';
+      inp.style.cssText = 'width:100%;background:#0A0A0F;border:1px solid #00E5FF;border-radius:12px;color:#fff;font-size:14px;padding:12px 16px;outline:none;font-family:inherit;';
+      glc.appendChild(inp);
+      inp.focus();
+      inp.addEventListener('input', function() {
+        selectedGoLive   = this.value.trim();
+        selectedGoLiveId = 'manual';
         checkReady();
-      };
-      // Pre-select if goLiveId was set on the invite
-      if (GOLIVE_ID && gl.id === GOLIVE_ID) {
-        c.classList.add('selected');
-        selectedGoLive   = gl.name;
-        selectedGoLiveId = gl.id;
-      }
-      glc.appendChild(c);
-    });
-  }
+      });
+      return;
+    }
+    const chosen = list.find(g => g.id === this.value);
+    if (chosen) {
+      selectedGoLive   = chosen.name;
+      selectedGoLiveId = chosen.id;
+      checkReady();
+    }
+  });
+
+  glc.appendChild(sel);
+  if (selectedGoLive) checkReady();
 
   // Render module chips
   const mc = document.getElementById('moduleChips');
@@ -1087,6 +1116,70 @@ app.post('/api/tts', requireAuth, async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// ─── Root — Consultant entry page ─────────────────────────────────────────────
+app.get('/', (_req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>FELLITO — Epic ATE Support</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#0A0A0F;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+.card{width:100%;max-width:420px;text-align:center;}
+.logo{font-size:48px;font-weight:900;color:#FF8C00;letter-spacing:8px;margin-bottom:6px;}
+.sub{font-size:12px;color:#8A8AA0;letter-spacing:3px;text-transform:uppercase;margin-bottom:4px;}
+.powered{font-size:11px;color:#3A3A5A;margin-bottom:48px;}
+.label{font-size:13px;color:#8A8AA0;margin-bottom:12px;line-height:1.6;}
+input{width:100%;background:#12121A;border:1px solid #1E1E2E;border-radius:14px;color:#fff;font-size:14px;padding:14px 18px;outline:none;margin-bottom:12px;transition:border .2s;}
+input:focus{border-color:#FF8C00;}
+input::placeholder{color:#3A3A5A;}
+button{width:100%;background:#FF8C00;color:#000;font-size:15px;font-weight:800;letter-spacing:1px;border:none;border-radius:14px;padding:16px;cursor:pointer;transition:opacity .2s;}
+button:hover{opacity:.9;}
+.err{color:#FF3B5C;font-size:13px;margin-top:12px;display:none;}
+.divider{border:none;border-top:1px solid #1E1E2E;margin:32px 0;}
+.hint{font-size:12px;color:#3A3A5A;line-height:1.7;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">FELLITO</div>
+  <div class="sub">Epic ATE Go-Live Support</div>
+  <div class="powered">Powered by Eclat Universe</div>
+
+  <div class="label">Paste your invite link or token below to start your session.</div>
+  <input id="tokenInput" placeholder="Paste invite link or token here..." autocomplete="off"/>
+  <button onclick="go()">Enter Session →</button>
+  <div class="err" id="err">Invalid link. Check your invite email and try again.</div>
+
+  <hr class="divider"/>
+  <div class="hint">Don't have a link? Contact your Go-Live admin to receive an invite.<br/><br/>Sessions are device-locked and expire after 10 minutes.</div>
+</div>
+<script>
+  // Auto-redirect if a token is in the URL path already
+  const path = window.location.pathname;
+  if (path.startsWith('/temp/') || path.startsWith('/t/')) {
+    window.location.href = path;
+  }
+
+  function go() {
+    let val = document.getElementById('tokenInput').value.trim();
+    if (!val) return;
+    // Extract token from full URL if pasted
+    const match = val.match(/\\/temp\\/([a-zA-Z0-9_-]+)/);
+    if (match) { window.location.href = '/temp/' + match[1]; return; }
+    // Raw token
+    if (/^[a-zA-Z0-9_-]{10,}$/.test(val)) { window.location.href = '/temp/' + val; return; }
+    document.getElementById('err').style.display = 'block';
+  }
+
+  document.getElementById('tokenInput').addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+</script>
+</body>
+</html>`);
 });
 
 // ─── Owner Magic Link ─────────────────────────────────────────────────────────
