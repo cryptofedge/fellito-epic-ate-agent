@@ -499,9 +499,38 @@ textarea::placeholder{color:#8A8AA0;}
       <div class="header-name">FELLITO</div>
       <div class="header-sub" id="headerSub">${name} · Epic ATE Support</div>
     </div>
-    <div class="timer-pill">
-      <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4.5" stroke="#FFB800" stroke-width="1" fill="none"/><path d="M5 2.5V5l1.5 1.5" stroke="#FFB800" stroke-width="1" stroke-linecap="round"/></svg>
-      <span class="timer-text" id="countdown">10:00</span>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button onclick="openNearby()" title="What's nearby?" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:20px;color:#00E5FF;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:5px;">
+        📍 Nearby
+      </button>
+      <div class="timer-pill">
+        <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4.5" stroke="#FFB800" stroke-width="1" fill="none"/><path d="M5 2.5V5l1.5 1.5" stroke="#FFB800" stroke-width="1" stroke-linecap="round"/></svg>
+        <span class="timer-text" id="countdown">10:00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Nearby Panel ── -->
+  <div id="nearbyPanel" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);">
+    <div style="position:absolute;bottom:0;left:0;right:0;background:#12121A;border-radius:24px 24px 0 0;border-top:1px solid #1E1E2E;max-height:80vh;display:flex;flex-direction:column;">
+      <!-- Panel header -->
+      <div style="padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1E1E2E;flex-shrink:0;">
+        <div>
+          <div style="font-size:16px;font-weight:800;color:#fff;letter-spacing:1px;">📍 What's Nearby</div>
+          <div style="font-size:11px;color:#8A8AA0;margin-top:2px;" id="nearbyLocation">Detecting your location...</div>
+        </div>
+        <button onclick="closeNearby()" style="background:#1E1E2E;border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;">✕</button>
+      </div>
+      <!-- Category tabs -->
+      <div style="display:flex;gap:8px;padding:12px 16px;flex-shrink:0;overflow-x:auto;">
+        ${['🍔 Food','☕ Coffee','🏨 Hotels','🅿️ Parking','💊 Pharmacy','🏋️ Gym'].map((cat,i) =>
+          `<button onclick="fetchNearby('${cat}')" id="ncat${i}" style="background:#0A0A0F;border:1px solid #2A2A3E;border-radius:20px;color:#8A8AA0;font-size:12px;font-weight:600;padding:6px 14px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .2s;">${cat}</button>`
+        ).join('')}
+      </div>
+      <!-- Results -->
+      <div id="nearbyResults" style="flex:1;overflow-y:auto;padding:8px 16px 24px;">
+        <div style="text-align:center;color:#8A8AA0;font-size:13px;padding:32px 0;">Pick a category above</div>
+      </div>
     </div>
   </div>
 
@@ -752,6 +781,106 @@ If the user's message contains or appears to contain ANY of the following, REFUS
 
 When PHI is detected, respond ONLY with:
 "⛔ STOP — I cannot process patient information. FELLITO is a workflow support tool only. Never enter patient names, MRNs, charts, or any PHI here. Ask me about Epic workflows and I'll help you sharp sharp."\`;
+}
+
+// ── Nearby ─────────────────────────────────────────────────────────────────
+let nearbyCoords = null;
+
+function openNearby() {
+  document.getElementById('nearbyPanel').style.display = 'block';
+  if (!nearbyCoords) {
+    document.getElementById('nearbyLocation').textContent = 'Detecting your location...';
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        nearbyCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+        document.getElementById('nearbyLocation').textContent =
+          `📍 ${nearbyCoords.lat.toFixed(4)}, ${nearbyCoords.lon.toFixed(4)}`;
+      },
+      () => {
+        document.getElementById('nearbyLocation').textContent = 'Location unavailable — enable GPS and try again';
+      },
+      { timeout: 8000 }
+    );
+  }
+}
+
+function closeNearby() {
+  document.getElementById('nearbyPanel').style.display = 'none';
+}
+
+const categoryMap = {
+  '🍔 Food':    { amenity: 'restaurant|fast_food|food_court', label: 'restaurant' },
+  '☕ Coffee':  { amenity: 'cafe', label: 'cafe' },
+  '🏨 Hotels':  { tourism: 'hotel|motel|hostel', label: 'hotel' },
+  '🅿️ Parking': { amenity: 'parking', label: 'parking' },
+  '💊 Pharmacy':{ amenity: 'pharmacy', label: 'pharmacy' },
+  '🏋️ Gym':    { leisure: 'fitness_centre', label: 'gym' },
+};
+
+async function fetchNearby(cat) {
+  // Highlight active tab
+  document.querySelectorAll('[id^="ncat"]').forEach(b => {
+    b.style.background = '#0A0A0F'; b.style.color = '#8A8AA0'; b.style.borderColor = '#2A2A3E';
+  });
+  event.target.style.background = '#00E5FF22';
+  event.target.style.color = '#00E5FF';
+  event.target.style.borderColor = '#00E5FF';
+
+  const el = document.getElementById('nearbyResults');
+  if (!nearbyCoords) {
+    el.innerHTML = '<div style="text-align:center;color:#FF3B5C;padding:24px;font-size:13px;">Enable location access first</div>';
+    return;
+  }
+  el.innerHTML = '<div style="text-align:center;color:#8A8AA0;padding:24px;font-size:13px;">Searching...</div>';
+
+  const { lat, lon } = nearbyCoords;
+  const radius = 800; // meters
+  const cfg = categoryMap[cat];
+  let filter = '';
+  if (cfg.amenity)  filter = \`node["amenity"~"\${cfg.amenity}"](around:\${radius},\${lat},\${lon});\`;
+  else if (cfg.tourism) filter = \`node["tourism"~"\${cfg.tourism}"](around:\${radius},\${lat},\${lon});\`;
+  else if (cfg.leisure) filter = \`node["leisure"~"\${cfg.leisure}"](around:\${radius},\${lat},\${lon});\`;
+
+  const query = \`[out:json][timeout:10];(\${filter});out body 20;\`;
+
+  try {
+    const r = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST', body: 'data=' + encodeURIComponent(query)
+    });
+    const json = await r.json();
+    const places = json.elements || [];
+
+    if (!places.length) {
+      el.innerHTML = '<div style="text-align:center;color:#8A8AA0;padding:24px;font-size:13px;">Nothing found within 800m</div>';
+      return;
+    }
+
+    el.innerHTML = places.slice(0, 15).map(p => {
+      const name = p.tags?.name || 'Unnamed';
+      const street = p.tags?.['addr:street'] ? p.tags['addr:street'] + (p.tags['addr:housenumber'] ? ' ' + p.tags['addr:housenumber'] : '') : '';
+      const phone = p.tags?.phone || p.tags?.['contact:phone'] || '';
+      const mapsUrl = \`https://www.google.com/maps/search/?api=1&query=\${p.lat},\${p.lon}\`;
+      const dist = Math.round(haversine(lat, lon, p.lat, p.lon));
+      return \`
+        <div style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:14px;padding:14px;margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div style="font-size:14px;font-weight:700;color:#fff;flex:1;">\${name}</div>
+            <div style="font-size:11px;color:#00E5FF;font-weight:700;margin-left:8px;flex-shrink:0;">\${dist}m</div>
+          </div>
+          \${street ? \`<div style="font-size:12px;color:#8A8AA0;margin-top:3px;">\${street}</div>\` : ''}
+          \${phone ? \`<div style="font-size:12px;color:#8A8AA0;">\${phone}</div>\` : ''}
+          <a href="\${mapsUrl}" target="_blank" style="display:inline-block;margin-top:8px;font-size:11px;font-weight:700;color:#00E5FF;text-decoration:none;background:#00E5FF15;border:1px solid #00E5FF44;border-radius:8px;padding:4px 10px;">Open in Maps →</a>
+        </div>\`;
+    }).join('');
+  } catch {
+    el.innerHTML = '<div style="text-align:center;color:#FF3B5C;padding:24px;font-size:13px;">Search failed — check your connection</div>';
+  }
+}
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371000, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
 // ── Voice output (ElevenLabs) ──────────────────────────────────────────────
