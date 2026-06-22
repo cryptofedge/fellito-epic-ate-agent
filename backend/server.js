@@ -1089,6 +1089,19 @@ app.post('/api/tts', requireAuth, async (req, res) => {
   }
 });
 
+// ─── Owner Magic Link ─────────────────────────────────────────────────────────
+app.get('/owner/:secret', (req, res) => {
+  const secret = process.env.OWNER_MAGIC_SECRET;
+  if (!secret || req.params.secret !== secret) {
+    return res.status(403).send('Access denied.');
+  }
+  const owner = require('./authEngine').listTeam().find(u => u.role === 'owner');
+  if (!owner) return res.status(500).send('Owner account not found.');
+  const jwt = signToken({ sub: owner.id, email: owner.email, name: owner.name, role: 'owner' }, '12h');
+  res.cookie('_fellito_admin_token', jwt, { httpOnly: false, maxAge: 12 * 60 * 60 * 1000, sameSite: 'strict' });
+  res.redirect('/admin/');
+});
+
 // ─── Security Flags ───────────────────────────────────────────────────────────
 const securityFlags = [];
 
