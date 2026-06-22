@@ -803,8 +803,25 @@ function checkReady() {
   }
 }
 
+// ── Module intro briefs (instant, no API call) ─────────────────────────────
+const MODULE_BRIEFS = {
+  'CPOE':               ['Order entry errors — wrong route, dose, or frequency', 'Cosign backlog — attendings with unsigned orders piling up', 'Order sets not loading or missing items for the unit'],
+  'ClinDoc':            ['Flowsheet entries not saving or not syncing to the chart', 'SmartText / SmartPhrase not populating correctly', 'Documentation landing on the wrong encounter'],
+  'ASAP (ED)':          ['Triage stuck — missing required fields blocking progression', 'Bed request and placement workflow confusion', 'Tracking board not refreshing or showing stale status'],
+  'Beacon (Oncology)':  ['Treatment plan not released or wrong phase is active', 'Chemo order verification failing at pharmacist step', 'Prior auth not attached — orders getting kicked back'],
+  'Beaker (Lab)':       ['Specimen label printing to wrong printer or wrong label', 'Results not routing back to the ordering provider', 'Lab orders not interfacing to the instrument'],
+  'ADT':                ['Transfer not completing in Epic — bed still showing occupied', 'Discharge disposition mismatch with bed management', 'Patient class not updating correctly after admission'],
+  'OpTime/Anesthesia':  ['Case not posted or showing wrong room / wrong time', 'Anesthesia record not syncing with the OR case', 'Post-op orders not bridging to the inpatient encounter'],
+  'Prelude/Cadence':    ['Patient not found in search — MPI / duplicate record issues', 'Scheduling conflict — slot blocked or not available', 'Insurance not attached to the appointment'],
+  'Radiant':            ['Order not appearing in the Radiant worklist', 'Exam status not updating after the study is done', 'Report not routing back to the ordering provider'],
+  'MyChart':            ['Patient cannot activate account — activation token issues', 'Messages not routing to the correct provider pool', 'Test results not releasing on the expected schedule'],
+  'In Basket':          ['Messages routing to the wrong pool or wrong provider', 'Lab results landing on the wrong In Basket', 'Staff messages not visible to the assigned team'],
+  'Haiku/Canto':        ['Mobile login failures — MFA or SSO issues', 'Orders not showing on mobile after entry at a workstation', 'Chart not syncing after device was in offline mode'],
+  'Reporting':          ['Report not pulling the correct date range', 'Clarity query timing out on large datasets', 'Dashboard metrics not matching operational numbers'],
+};
+
 // ── Start chat ─────────────────────────────────────────────────────────────
-async function startChat() {
+function startChat() {
   document.getElementById('screen-welcome').classList.remove('active');
   document.getElementById('screen-chat').classList.add('active');
   document.getElementById('ctxGoLive').textContent = selectedGoLive || '—';
@@ -813,32 +830,18 @@ async function startChat() {
   document.getElementById('headerSub').textContent = selectedGoLive ? selectedGoLive.split('—')[0].trim() + ' · ' + selectedModule : selectedModule + ' · ' + selectedDept;
   document.getElementById('input').focus();
 
-  showTyping();
-  try {
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        messages: [{ role: 'user', content: 'Introduce yourself. Tell me specifically what you know about the ' + selectedModule + ' module at ' + (selectedGoLive || 'this organization') + ' in the ' + (selectedDept || 'department') + '. What are the top 3 most common workflow questions or issues I should be ready for on the floor today?' }],
-        max_tokens: 500,
-        moduleTag: selectedModule,
-        goLiveId: selectedGoLiveId,
-        dept: selectedDept,
-        goLive: selectedGoLive,
-      }),
-    });
-    hideTyping();
-    if (res.status === 401) { expire(); return; }
-    const data = await res.json();
-    const reply = data.content?.[0]?.text ?? "I'm FELLITO. I got you. What do you need?";
-    addBubble('assistant', reply);
-    chatHistory.push({ role: 'user', content: 'Introduce yourself and orient me for my shift.' });
-    chatHistory.push({ role: 'assistant', content: reply });
-  } catch {
-    hideTyping();
-    addBubble('assistant', "I'm FELLITO — your Epic ATE Go-Live support. What's the issue?");
-  }
+  const org   = selectedGoLive ? selectedGoLive.split('—')[0].trim() : 'this org';
+  const dept  = selectedDept || 'your department';
+  const mod   = selectedModule || 'this module';
+  const tips  = MODULE_BRIEFS[mod] || ['Check order workflows', 'Watch for cosign backlogs', 'Support end-user navigation issues'];
+
+  const intro = "I'm FELLITO — locked in on " + mod + " at " + org + ", " + dept + ".\\n\\nTop issues to watch on the floor today:\\n• " + tips.join("\\n• ") + "\\n\\nWhat do you need?";
+
+  setTimeout(() => {
+    addBubble('assistant', intro);
+    chatHistory.push({ role: 'user',      content: 'Introduce yourself and orient me for my shift.' });
+    chatHistory.push({ role: 'assistant', content: intro });
+  }, 400);
 }
 
 // system prompt is built server-side in buildServerSystemPrompt()
