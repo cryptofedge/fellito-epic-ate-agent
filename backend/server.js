@@ -831,13 +831,13 @@ async function startChat() {
     hideTyping();
     if (res.status === 401) { expire(); return; }
     const data = await res.json();
-    const reply = data.content?.[0]?.text ?? "Yo! I'm FELLITO. No wahala — I got you. What do you need?";
+    const reply = data.content?.[0]?.text ?? "I'm FELLITO. I got you. What do you need?";
     addBubble('assistant', reply);
     chatHistory.push({ role: 'user', content: 'Introduce yourself and orient me for my shift.' });
     chatHistory.push({ role: 'assistant', content: reply });
   } catch {
     hideTyping();
-    addBubble('assistant', "Yo! I'm FELLITO — your Epic ATE Go-Live support. No wahala, I got you. What's the issue?");
+    addBubble('assistant', "I'm FELLITO — your Epic ATE Go-Live support. What's the issue?");
   }
 }
 
@@ -1003,7 +1003,7 @@ async function sendMessage() {
     hideTyping();
     if (res.status === 401) { expire(); return; }
     const data = await res.json();
-    const reply = data.content?.[0]?.text ?? 'No wahala — try again.';
+    const reply = data.content?.[0]?.text ?? 'Connection issue — try again.';
     addBubble('assistant', reply);
     chatHistory.push({ role: 'assistant', content: reply });
   } catch {
