@@ -820,8 +820,8 @@ async function startChat() {
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        messages: [{ role: 'user', content: 'Introduce yourself and orient me for my shift.' }],
-        max_tokens: 400,
+        messages: [{ role: 'user', content: 'Introduce yourself. Tell me specifically what you know about the ' + selectedModule + ' module at ' + (selectedGoLive || 'this organization') + ' in the ' + (selectedDept || 'department') + '. What are the top 3 most common workflow questions or issues I should be ready for on the floor today?' }],
+        max_tokens: 500,
         moduleTag: selectedModule,
         goLiveId: selectedGoLiveId,
         dept: selectedDept,
