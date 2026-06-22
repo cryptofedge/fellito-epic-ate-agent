@@ -524,7 +524,7 @@ textarea::placeholder{color:#8A8AA0;}
       <!-- Category tabs -->
       <div style="display:flex;gap:8px;padding:12px 16px;flex-shrink:0;overflow-x:auto;">
         ${['🍔 Food','☕ Coffee','🏨 Hotels','🅿️ Parking','💊 Pharmacy','🏋️ Gym'].map((cat,i) =>
-          `<button onclick="fetchNearby('${cat}')" id="ncat${i}" style="background:#0A0A0F;border:1px solid #2A2A3E;border-radius:20px;color:#8A8AA0;font-size:12px;font-weight:600;padding:6px 14px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .2s;">${cat}</button>`
+          '<button onclick="fetchNearby(\'' + cat + '\')" id="ncat' + i + '" style="background:#0A0A0F;border:1px solid #2A2A3E;border-radius:20px;color:#8A8AA0;font-size:12px;font-weight:600;padding:6px 14px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .2s;">' + cat + '</button>'
         ).join('')}
       </div>
       <!-- Results -->
