@@ -668,7 +668,7 @@ async function loadGoLive() {
   const list   = active.length ? active : lives;
 
   const sel = document.createElement('select');
-  sel.style.cssText = 'width:100%;background:#0A0A0F;border:1px solid #2A2A3E;border-radius:12px;color:#fff;font-size:14px;padding:12px 16px;outline:none;font-family:inherit;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'8\' viewBox=\'0 0 12 8\'%3E%3Cpath d=\'M1 1l5 5 5-5\' stroke=\'%238A8AA0\' stroke-width=\'1.5\' fill=\'none\' stroke-linecap=\'round\'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center;';
+  sel.style.cssText = 'width:100%;background:#0A0A0F;border:1px solid #2A2A3E;border-radius:12px;color:#fff;font-size:14px;padding:12px 16px;outline:none;font-family:inherit;cursor:pointer;';
 
   const placeholder = document.createElement('option');
   placeholder.value = '';
