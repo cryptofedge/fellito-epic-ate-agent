@@ -255,6 +255,21 @@ app.post('/api/rag/ingest', requireAuth, upload.single('file'), async (req, res)
   }
 });
 
+// ─── Send invite email ────────────────────────────────────────────────────────
+app.post('/api/invite', requireOwner, async (req, res) => {
+  const { toEmail, toName, label } = req.body;
+  if (!toEmail) return res.status(400).json({ error: 'toEmail required' });
+  try {
+    const link = createTempLink({ label: toName || label || toEmail });
+    const baseUrl = process.env.BASE_URL || process.env.BACKEND_URL || 'http://localhost:3001';
+    const inviteUrl = baseUrl + '/temp/' + link.token;
+    await sendInviteEmail({ toEmail, toName, inviteUrl, label });
+    res.json({ ok: true, inviteUrl });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Upload screenshot / tip sheet ───────────────────────────────────────────
 app.post('/api/upload', requireAuth, upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
