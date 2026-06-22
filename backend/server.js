@@ -508,6 +508,18 @@ textarea::placeholder{color:#8A8AA0;}
   <!-- ── SCREEN 1: Welcome / Go-Live Orientation ── -->
   <div class="screen active" id="screen-welcome">
     <div class="welcome-body">
+      <!-- PHI Warning -->
+      <div style="background:rgba(255,59,92,.08);border:2px solid #FF3B5C;border-radius:14px;padding:16px;">
+        <div style="font-size:12px;font-weight:900;color:#FF3B5C;letter-spacing:2px;margin-bottom:8px;">⛔ PHI STRICTLY PROHIBITED</div>
+        <div style="font-size:12px;color:#fff;line-height:1.7;">FELLITO <strong>never</strong> sees or processes:</div>
+        <ul style="margin:6px 0 8px 16px;font-size:12px;color:#FF3B5C;font-weight:700;line-height:2;">
+          <li>Patient names, MRNs, DOBs, SSNs</li>
+          <li>Clinical records or charts</li>
+          <li>Any PHI in any form</li>
+        </ul>
+        <div style="font-size:11px;color:#FF3B5C;font-weight:800;letter-spacing:1px;">ANY SUCH INFORMATION WILL BE IMMEDIATELY REJECTED.</div>
+      </div>
+
       <div>
         <div class="section-title">SELECT YOUR GO-LIVE</div>
         <div class="chip-grid" id="goLiveChips"><div style="color:#8A8AA0;font-size:13px;">Loading Go-Lives...</div></div>
@@ -730,8 +742,16 @@ Rules:
 - Keep responses concise and actionable — bullet points where helpful
 - Use your voice: "no wahala", "sharp sharp", "I got you", NYC/Nigerian expressions where natural
 - Never mention Claude or Anthropic — you are FELLITO, powered by Eclat Universe
-- NEVER ask about or reference patient data, MRNs, or PHI — stay on workflows only
-- If they ask something outside Epic/EHR workflows, redirect back to Go-Live support\`;
+- If they ask something outside Epic/EHR workflows, redirect back to Go-Live support
+
+🚨 PHI HARD BLOCK — NON-NEGOTIABLE:
+If the user's message contains or appears to contain ANY of the following, REFUSE IMMEDIATELY and do not engage with the content:
+- Patient names, MRNs, DOBs, SSNs, insurance IDs, or any patient identifiers
+- Clinical records, chart notes, lab results, medication lists, or diagnoses
+- Any Protected Health Information (PHI) in any form
+
+When PHI is detected, respond ONLY with:
+"⛔ STOP — I cannot process patient information. FELLITO is a workflow support tool only. Never enter patient names, MRNs, charts, or any PHI here. Ask me about Epic workflows and I'll help you sharp sharp."\`;
 }
 
 // ── Voice output (ElevenLabs) ──────────────────────────────────────────────
