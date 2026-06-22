@@ -794,7 +794,7 @@ function openNearby() {
       pos => {
         nearbyCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
         document.getElementById('nearbyLocation').textContent =
-          `📍 ${nearbyCoords.lat.toFixed(4)}, ${nearbyCoords.lon.toFixed(4)}`;
+          '📍 ' + nearbyCoords.lat.toFixed(4) + ', ' + nearbyCoords.lon.toFixed(4);
       },
       () => {
         document.getElementById('nearbyLocation').textContent = 'Location unavailable — enable GPS and try again';
@@ -856,21 +856,20 @@ async function fetchNearby(cat) {
     }
 
     el.innerHTML = places.slice(0, 15).map(p => {
-      const name = p.tags?.name || 'Unnamed';
-      const street = p.tags?.['addr:street'] ? p.tags['addr:street'] + (p.tags['addr:housenumber'] ? ' ' + p.tags['addr:housenumber'] : '') : '';
-      const phone = p.tags?.phone || p.tags?.['contact:phone'] || '';
-      const mapsUrl = \`https://www.google.com/maps/search/?api=1&query=\${p.lat},\${p.lon}\`;
+      const name = p.tags && p.tags.name ? p.tags.name : 'Unnamed';
+      const street = p.tags && p.tags['addr:street'] ? p.tags['addr:street'] + (p.tags['addr:housenumber'] ? ' ' + p.tags['addr:housenumber'] : '') : '';
+      const phone = (p.tags && (p.tags.phone || p.tags['contact:phone'])) || '';
+      const mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + p.lat + ',' + p.lon;
       const dist = Math.round(haversine(lat, lon, p.lat, p.lon));
-      return \`
-        <div style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:14px;padding:14px;margin-bottom:10px;">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-            <div style="font-size:14px;font-weight:700;color:#fff;flex:1;">\${name}</div>
-            <div style="font-size:11px;color:#00E5FF;font-weight:700;margin-left:8px;flex-shrink:0;">\${dist}m</div>
-          </div>
-          \${street ? \`<div style="font-size:12px;color:#8A8AA0;margin-top:3px;">\${street}</div>\` : ''}
-          \${phone ? \`<div style="font-size:12px;color:#8A8AA0;">\${phone}</div>\` : ''}
-          <a href="\${mapsUrl}" target="_blank" style="display:inline-block;margin-top:8px;font-size:11px;font-weight:700;color:#00E5FF;text-decoration:none;background:#00E5FF15;border:1px solid #00E5FF44;border-radius:8px;padding:4px 10px;">Open in Maps →</a>
-        </div>\`;
+      return '<div style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:14px;padding:14px;margin-bottom:10px;">'
+        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+        + '<div style="font-size:14px;font-weight:700;color:#fff;flex:1;">' + name + '</div>'
+        + '<div style="font-size:11px;color:#00E5FF;font-weight:700;margin-left:8px;flex-shrink:0;">' + dist + 'm</div>'
+        + '</div>'
+        + (street ? '<div style="font-size:12px;color:#8A8AA0;margin-top:3px;">' + street + '</div>' : '')
+        + (phone  ? '<div style="font-size:12px;color:#8A8AA0;">' + phone + '</div>' : '')
+        + '<a href="' + mapsUrl + '" target="_blank" style="display:inline-block;margin-top:8px;font-size:11px;font-weight:700;color:#00E5FF;text-decoration:none;background:#00E5FF15;border:1px solid #00E5FF44;border-radius:8px;padding:4px 10px;">Open in Maps →</a>'
+        + '</div>';
     }).join('');
   } catch {
     el.innerHTML = '<div style="text-align:center;color:#FF3B5C;padding:24px;font-size:13px;">Search failed — check your connection</div>';
