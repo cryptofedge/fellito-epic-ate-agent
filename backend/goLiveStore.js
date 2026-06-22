@@ -25,7 +25,10 @@ function save(events) {
 function listGoLives(user) {
   const all = load();
   if (user.role === 'owner') return all;
-  return all.filter((e) => user.assignedGoLives.includes(e.id));
+  if (user.temp) return all.filter((e) => e.active);
+  const assigned = user.assignedGoLives || [];
+  if (assigned.length === 0) return all.filter((e) => e.active);
+  return all.filter((e) => assigned.includes(e.id));
 }
 
 function createGoLive({ name, startDate, endDate, modules, createdBy }) {
