@@ -1000,6 +1000,49 @@ async function sendMessage() {
 }
 
 loadGoLive();
+
+// ── Screenshot / screen-capture detection ─────────────────────────────────
+function postSecurityFlag(type, detail) {
+  fetch('/api/security/flag', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
+    body: JSON.stringify({ type, detail }),
+  }).catch(() => {});
+}
+
+function showScreenshotWarning() {
+  const w = document.createElement('div');
+  w.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#FF3B5C;color:#fff;font-size:13px;font-weight:800;padding:12px 24px;border-radius:14px;z-index:9999;box-shadow:0 4px 24px rgba(255,59,92,.5);letter-spacing:.5px;text-align:center;';
+  w.textContent = '⚠️ Screenshot activity detected and logged';
+  document.body.appendChild(w);
+  setTimeout(() => w.remove(), 4000);
+}
+
+// PrintScreen key (desktop)
+document.addEventListener('keyup', e => {
+  if (e.key === 'PrintScreen' || e.keyCode === 44) {
+    postSecurityFlag('screenshot_key', 'PrintScreen key pressed');
+    showScreenshotWarning();
+  }
+});
+
+// Clipboard write (some screenshot tools write to clipboard)
+document.addEventListener('copy', () => {
+  postSecurityFlag('clipboard_copy', 'Content copied to clipboard');
+});
+
+// Visibility change — rapid hide/show pattern (mobile screenshot on some devices)
+let lastHidden = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    lastHidden = Date.now();
+  } else {
+    const gap = Date.now() - lastHidden;
+    if (lastHidden && gap < 1500) {
+      postSecurityFlag('visibility_flash', 'Page briefly hidden (' + gap + 'ms) — possible screenshot');
+    }
+  }
+});
 </script>
 </body></html>`;
 }
@@ -1044,6 +1087,36 @@ app.post('/api/tts', requireAuth, async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// ─── Security Flags ───────────────────────────────────────────────────────────
+const securityFlags = [];
+
+app.post('/api/security/flag', requireAuth, (req, res) => {
+  const { type, detail } = req.body;
+  const flag = {
+    id: Date.now().toString(),
+    type: type || 'unknown',
+    detail: detail || '',
+    userId: req.user.id,
+    userName: req.user.name || req.user.email,
+    userEmail: req.user.email,
+    ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+    ts: new Date().toISOString(),
+  };
+  securityFlags.unshift(flag);
+  if (securityFlags.length > 500) securityFlags.pop();
+  console.warn('[SECURITY FLAG]', flag);
+  res.json({ ok: true });
+});
+
+app.get('/api/security/flags', requireOwner, (_req, res) => {
+  res.json(securityFlags);
+});
+
+app.delete('/api/security/flags', requireOwner, (_req, res) => {
+  securityFlags.length = 0;
+  res.json({ ok: true });
 });
 
 // ─── Health ───────────────────────────────────────────────────────────────────

@@ -214,6 +214,7 @@
     <div class="nav-item" onclick="showPage('issues')">🚨 Issues Tracker</div>
     <div class="nav-item" id="nav-invites" onclick="showPage('invites')">🔐 Invite Links</div>
     <div class="nav-item" id="nav-admin-links" onclick="showPage('admin-links')">🛡️ Admin Access</div>
+    <div class="nav-item" id="nav-security" onclick="showPage('security')">🚩 Security Flags</div>
     <div class="nav-item" id="nav-team" onclick="showPage('team')" style="display:none">👥 Team</div>
 
     <div class="sidebar-spacer"></div>
@@ -477,6 +478,22 @@
         <hr>
         <div class="page-title" style="font-size:18px;margin-bottom:16px;">📋 Go-Live Issue Report</div>
         <div id="report-content"></div>
+      </div>
+    </div>
+
+    <!-- ── SECURITY FLAGS ── -->
+    <div id="page-security" class="page">
+      <div class="page-title">🚩 Security Flags</div>
+      <div class="page-sub">Real-time log of screenshot attempts, clipboard copies, and suspicious session activity by consultants.</div>
+
+      <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+        <button onclick="loadSecurityFlags()" style="background:var(--accent);color:#000;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;">↻ Refresh</button>
+        <button onclick="clearSecurityFlags()" style="background:none;border:1px solid var(--danger);color:var(--danger);border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;">Clear All</button>
+        <span id="sec-flag-count" style="font-size:12px;color:var(--muted);"></span>
+      </div>
+
+      <div id="sec-flags-list">
+        <p style="color:var(--muted);font-size:13px;">Loading...</p>
       </div>
     </div>
 
@@ -880,6 +897,7 @@
     if (name === 'issues') { populateIssueGoLiveDropdowns(); loadIssues(); }
     if (name === 'invites') { populateInviteGoLiveDropdown(); loadInviteLinks(); }
     if (name === 'admin-links') loadAdminLinks();
+    if (name === 'security') loadSecurityFlags();
   }
 
   // ─── Data loading ─────────────────────────────────────────────────────────
@@ -1364,6 +1382,46 @@
 
   // ─── Admin Access Links ───────────────────────────────────────────────────
   let lastAdminUrl = '';
+
+  async function loadSecurityFlags() {
+    const el = document.getElementById('sec-flags-list');
+    const ct = document.getElementById('sec-flag-count');
+    el.innerHTML = '<p style="color:var(--muted);font-size:13px;">Loading...</p>';
+    try {
+      const flags = await api('GET', '/api/security/flags');
+      ct.textContent = flags.length + ' event' + (flags.length !== 1 ? 's' : '') + ' logged';
+      if (!flags.length) {
+        el.innerHTML = '<div style="text-align:center;padding:48px;color:var(--muted);font-size:13px;">No security events logged yet.</div>';
+        return;
+      }
+      const typeIcon = { screenshot_key: '📸', clipboard_copy: '📋', visibility_flash: '👁️' };
+      const typeLabel = { screenshot_key: 'PrintScreen Key', clipboard_copy: 'Clipboard Copy', visibility_flash: 'Visibility Flash' };
+      el.innerHTML = flags.map(f => `
+        <div style="background:var(--card);border:1px solid ${f.type === 'screenshot_key' ? 'var(--danger)' : 'var(--border)'};border-radius:12px;padding:16px;margin-bottom:10px;display:flex;gap:16px;align-items:flex-start;">
+          <div style="font-size:24px;flex-shrink:0;">${typeIcon[f.type] || '⚠️'}</div>
+          <div style="flex:1;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+              <div style="font-size:13px;font-weight:700;color:${f.type === 'screenshot_key' ? 'var(--danger)' : 'var(--warning)'};">
+                ${typeLabel[f.type] || f.type}
+              </div>
+              <div style="font-size:11px;color:var(--muted);">${new Date(f.ts).toLocaleString()}</div>
+            </div>
+            <div style="font-size:13px;color:var(--text);margin-top:4px;">${f.userName} <span style="color:var(--muted);font-size:11px;">&lt;${f.userEmail}&gt;</span></div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${f.detail} · IP: ${f.ip}</div>
+          </div>
+        </div>`).join('');
+    } catch {
+      el.innerHTML = '<p style="color:var(--danger);font-size:13px;">Failed to load flags.</p>';
+    }
+  }
+
+  async function clearSecurityFlags() {
+    if (!confirm('Clear all security flags? This cannot be undone.')) return;
+    try {
+      await api('DELETE', '/api/security/flags');
+      loadSecurityFlags();
+    } catch (err) { alert('Error: ' + err.message); }
+  }
 
   async function loadAdminLinks() {
     try {
