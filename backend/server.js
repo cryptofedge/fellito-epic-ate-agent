@@ -25,6 +25,12 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
+// Bypass localtunnel warning page for all responses
+app.use((_req, res, next) => {
+  res.setHeader('bypass-tunnel-reminder', 'true');
+  next();
+});
+
 // Serve the admin portal as a static SPA
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
 
@@ -184,35 +190,6 @@ app.post('/api/chat', requireAuth, async (req, res) => {
     res.json(response);
   } catch (err) {
     console.error('[Chat]', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ─── Voice (requires auth) ────────────────────────────────────────────────────
-app.post('/api/voice', requireAuth, async (req, res) => {
-  const { text, voice_settings, model_id } = req.body;
-  const voiceId = process.env.ELEVENLABS_VOICE_ID;
-  if (!voiceId) return res.status(500).json({ error: 'ELEVENLABS_VOICE_ID not configured' });
-  try {
-    const response = await axios({
-      method: 'post',
-      url: `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
-      headers: {
-        'xi-api-key': process.env.ELEVENLABS_API_KEY,
-        'Content-Type': 'application/json',
-        'Accept': 'audio/mpeg',
-      },
-      data: {
-        text,
-        model_id: model_id ?? 'eleven_multilingual_v2',
-        voice_settings: voice_settings ?? { stability: 0.5, similarity_boost: 0.75 },
-      },
-      responseType: 'arraybuffer',
-    });
-    res.set('Content-Type', 'audio/mpeg');
-    res.send(Buffer.from(response.data));
-  } catch (err) {
-    console.error('[Voice]', err.response?.status, err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -509,9 +486,6 @@ textarea::placeholder{color:#8A8AA0;}
 .send-btn svg{fill:#000;}
 .send-btn:disabled{background:#1E1E2E;cursor:not-allowed;}
 .send-btn:disabled svg{fill:#8A8AA0;}
-.mic-btn{width:40px;height:40px;border-radius:50%;background:#1E1E2E;border:1px solid #2A2A3E;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;}
-.mic-btn.listening{background:#FF3B5C;border-color:#FF3B5C;animation:pulse .8s infinite;}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,59,92,.4);}50%{box-shadow:0 0 0 8px rgba(255,59,92,0);}}
 
 /* expired overlay */
 .expired-overlay{display:none;position:absolute;inset:0;background:rgba(10,10,15,.97);border-radius:44px;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:32px;text-align:center;z-index:100;}
@@ -626,11 +600,8 @@ textarea::placeholder{color:#8A8AA0;}
     </div>
     <div class="messages" id="messages"></div>
     <div class="input-bar">
-      <button class="mic-btn" id="micBtn" onclick="toggleMic()" title="Hold to speak">
-        <svg id="micIcon" width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1 17.93V21H9v2h6v-2h-2v-2.07A8 8 0 0 0 20 11h-2a6 6 0 0 1-12 0H4a8 8 0 0 0 7 7.93z"/></svg>
-      </button>
       <div class="input-wrap">
-        <textarea id="input" placeholder="Ask Fellito or tap mic..." rows="1"></textarea>
+        <textarea id="input" placeholder="Ask FELLITO anything..." rows="1"></textarea>
       </div>
       <button class="send-btn" id="sendBtn" onclick="sendMessage()">
         <svg width="18" height="18" viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
@@ -661,9 +632,6 @@ let selectedModule = '';
 let selectedDept   = '';
 let chatHistory    = [];
 let expired        = false;
-let recognition    = null;
-let isListening    = false;
-let currentAudio   = null;
 
 // ── Clock ──────────────────────────────────────────────────────────────────
 function updateClock() {
@@ -828,7 +796,6 @@ async function startChat() {
     const data = await res.json();
     const reply = data.content?.[0]?.text ?? "Yo! I'm FELLITO. No wahala — I got you. What do you need?";
     addBubble('assistant', reply);
-    speakReply(reply);
     chatHistory.push({ role: 'user', content: 'Introduce yourself and orient me for my shift.' });
     chatHistory.push({ role: 'assistant', content: reply });
   } catch {
@@ -945,60 +912,6 @@ function haversine(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// ── Voice output (ElevenLabs) ──────────────────────────────────────────────
-async function speakReply(text) {
-  try {
-    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-    const res = await fetch('/api/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
-      body: JSON.stringify({ text }),
-    });
-    if (!res.ok) return;
-    const blob = await res.blob();
-    const url  = URL.createObjectURL(blob);
-    currentAudio = new Audio(url);
-    currentAudio.play().catch(() => {});
-    currentAudio.onended = () => { URL.revokeObjectURL(url); currentAudio = null; };
-  } catch {}
-}
-
-// ── Voice input (Web Speech API) ───────────────────────────────────────────
-function toggleMic() {
-  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-    alert('Voice input is not supported in this browser. Try Chrome.');
-    return;
-  }
-  if (isListening) { recognition?.stop(); return; }
-
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  recognition = new SR();
-  recognition.lang = 'en-US';
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
-
-  recognition.onstart = () => {
-    isListening = true;
-    document.getElementById('micBtn').classList.add('listening');
-  };
-  recognition.onend = () => {
-    isListening = false;
-    document.getElementById('micBtn').classList.remove('listening');
-  };
-  recognition.onresult = (e) => {
-    const transcript = e.results[0][0].transcript;
-    const ta = document.getElementById('input');
-    ta.value = transcript;
-    ta.style.height = 'auto';
-    ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
-    sendMessage();
-  };
-  recognition.onerror = () => {
-    isListening = false;
-    document.getElementById('micBtn').classList.remove('listening');
-  };
-  recognition.start();
-}
 
 // ── Chat helpers ───────────────────────────────────────────────────────────
 function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -1055,7 +968,6 @@ async function sendMessage() {
     const data = await res.json();
     const reply = data.content?.[0]?.text ?? 'No wahala — try again.';
     addBubble('assistant', reply);
-    speakReply(reply);
     chatHistory.push({ role: 'assistant', content: reply });
   } catch {
     hideTyping();
@@ -1134,26 +1046,6 @@ html,body{height:100%;background:#050508;display:flex;align-items:center;justify
 </div></div></body></html>`;
 }
 
-// ─── TTS proxy (ElevenLabs) ───────────────────────────────────────────────────
-app.post('/api/tts', requireAuth, async (req, res) => {
-  const { text } = req.body;
-  if (!text) return res.status(400).json({ error: 'text required' });
-  const voiceId = process.env.ELEVENLABS_VOICE_ID;
-  const apiKey  = process.env.ELEVENLABS_API_KEY;
-  if (!voiceId || !apiKey) return res.status(503).json({ error: 'TTS not configured' });
-  try {
-    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-      method: 'POST',
-      headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
-      body: JSON.stringify({ text: text.slice(0, 800), model_id: 'eleven_turbo_v2', voice_settings: { stability: 0.5, similarity_boost: 0.75 } }),
-    });
-    if (!r.ok) return res.status(502).json({ error: 'TTS upstream error' });
-    res.set('Content-Type', 'audio/mpeg');
-    r.body.pipe(res);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
 
 // ─── Root — Consultant entry page ─────────────────────────────────────────────
 app.get('/', (_req, res) => {
