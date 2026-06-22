@@ -13,6 +13,7 @@ const { requireAuth, requireOwner } = require('./authMiddleware');
 const { listGoLives, createGoLive, updateGoLive, deleteGoLive } = require('./goLiveStore');
 const { listIssues, createIssue, updateIssue, deleteIssue, generateReport } = require('./issuesStore');
 const { listLinks, ingestLink, deleteLink } = require('./linksEngine');
+const { updateMemory, buildMemoryContext, addInsight, listAllMemory } = require('./memoryEngine');
 const { createTempLink, listTempLinks, openLink, revokeTempLink, validateTempSession, SESSION_TTL_MS } = require('./tempLinkStore');
 const { sendInviteEmail } = require('./emailService');
 const cookieParser = require('cookie-parser');
@@ -63,6 +64,11 @@ app.get('/api/admin/me', requireAuth, (req, res) => {
 // ─── Admin: team management (owner only) ──────────────────────────────────────
 app.get('/api/admin/team', requireAuth, (_req, res) => {
   res.json(listTeam());
+});
+
+// ─── Admin: user memory ───────────────────────────────────────────────────────
+app.get('/api/admin/memory', requireOwner, (_req, res) => {
+  res.json(listAllMemory());
 });
 
 app.post('/api/admin/team', requireOwner, async (req, res) => {
@@ -176,17 +182,48 @@ PHI HARD BLOCK: If the message contains ANY patient names, MRNs, DOBs, SSNs, ins
 app.post('/api/chat', requireAuth, async (req, res) => {
   const { model, messages, max_tokens, moduleTag, goLiveId, dept, goLive } = req.body;
   if (!model || !messages) return res.status(400).json({ error: 'Missing model or messages' });
+
+  const userId = req.user.linkId || req.user.sub || 'anon';
+
   try {
     let systemPrompt = buildServerSystemPrompt(moduleTag, dept, goLive);
+
+    // Inject RAG context
     const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
     if (lastUserMsg) {
-      const sessionId = goLiveId || req.user.linkId || req.user.sub || 'standby';
+      const sessionId = goLiveId || userId || 'standby';
       const ragContext = await queryDocuments(lastUserMsg.content, sessionId, 5, moduleTag || null);
-      if (ragContext) {
-        systemPrompt += '\n\nKNOWLEDGE BASE — use this if relevant:\n' + ragContext;
-      }
+      if (ragContext) systemPrompt += '\n\nKNOWLEDGE BASE — use this if relevant:\n' + ragContext;
     }
+
+    // Inject user memory
+    const memContext = buildMemoryContext(userId);
+    if (memContext) systemPrompt += '\n\n' + memContext;
+
     const response = await anthropic.messages.create({ model, system: systemPrompt, messages, max_tokens: max_tokens ?? 1024 });
+    const reply = response.content?.[0]?.text || '';
+
+    // Update memory with this exchange
+    if (lastUserMsg) {
+      updateMemory(userId, { role: 'user',      content: lastUserMsg.content, module: moduleTag, dept, goLive });
+    }
+    if (reply) {
+      updateMemory(userId, { role: 'assistant', content: reply,               module: moduleTag, dept, goLive });
+    }
+
+    // Auto-extract insight: if user asked about something specific, note it
+    if (lastUserMsg && moduleTag) {
+      const q = lastUserMsg.content.toLowerCase();
+      if (q.includes('cosign'))       addInsight(userId, `Needs help with cosign workflows in ${moduleTag}`);
+      if (q.includes('order set'))    addInsight(userId, `Uses order sets frequently in ${moduleTag}`);
+      if (q.includes('downtime'))     addInsight(userId, 'Has asked about downtime procedures');
+      if (q.includes('preference'))   addInsight(userId, `Works with preference lists in ${moduleTag}`);
+      if (q.includes('flowsheet'))    addInsight(userId, 'Uses flowsheet documentation workflows');
+      if (q.includes('note') || q.includes('documentation')) addInsight(userId, `Documentation workflows are a focus area in ${moduleTag}`);
+      if (q.includes('transfer') || q.includes('discharge')) addInsight(userId, 'Frequently handles transfer/discharge workflows');
+      if (q.includes('result') || q.includes('lab'))         addInsight(userId, 'Often asks about lab results and routing');
+    }
+
     res.json(response);
   } catch (err) {
     console.error('[Chat]', err.message);
