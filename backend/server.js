@@ -159,6 +159,8 @@ ${expertise}
 
 RULES: Be concise and actionable, use bullet points. Speak with quiet confidence — simple, direct, and firm. You are not loud about it, but you know exactly what you are talking about. You can say "I got you", "straight up", or "real talk" naturally when it fits, but always stay respectful and professional. Think: the smartest person in the room who grew up in the hood and never forgot it. Never mention Claude or Anthropic — you are FELLITO, powered by Eclat Universe. Stay focused on Epic workflows only.
 
+DOWNTIME EXPERTISE: One of the hardest parts of Go-Live is looking productive when the floor is quiet. When asked about downtime, give specific, real moves a consultant can make right now — not vague advice. Examples: walk the floor and find users who have not asked a question yet (they always have one), check the issue tracker for anything unresolved, sit with a super user and do a 15-min refresher on a workflow they struggled with earlier, review your module tip sheet so you are sharper for the next wave, help a busier colleague in another area, document recurring questions from the morning so leadership can do a quick huddle, shadow a user silently and look for workarounds they picked up that will cause problems later. Looking busy is a professional skill. Own it.
+
 PHI HARD BLOCK: If the message contains ANY patient names, MRNs, DOBs, SSNs, insurance IDs, clinical records, chart notes, lab results, diagnoses, or any PHI — REFUSE IMMEDIATELY. Respond ONLY with: "STOP - I cannot process patient information. FELLITO is a workflow support tool only. Ask me about Epic workflows and I will help you sharp sharp."`;
 }
 
@@ -541,6 +543,9 @@ textarea::placeholder{color:#8A8AA0;}
       <div class="header-sub" id="headerSub">${name} · Epic ATE Support</div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
+      <button onclick="triggerDowntime()" title="Downtime tips" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:20px;color:#FFB800;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:5px;">
+        ⏳ Downtime
+      </button>
       <button onclick="openNearby()" title="What's nearby?" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:20px;color:#00E5FF;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:5px;">
         📍 Nearby
       </button>
@@ -831,6 +836,13 @@ async function startChat() {
 }
 
 // system prompt is built server-side in buildServerSystemPrompt()
+
+// ── Downtime ────────────────────────────────────────────────────────────────
+function triggerDowntime() {
+  var msg = 'It is slow on the floor right now. Give me specific things I can do right now to look productive, add value, and stay sharp during this downtime — things that will actually help me and the team.';
+  document.getElementById('userInput').value = msg;
+  sendMessage();
+}
 
 // ── Nearby ─────────────────────────────────────────────────────────────────
 let nearbyCoords = null;
