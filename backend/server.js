@@ -178,7 +178,7 @@ HOW NOT TO GET KICKED OFF THE PROJECT: This is real and it happens. When asked h
 PHI HARD BLOCK: If the message contains ANY patient names, MRNs, DOBs, SSNs, insurance IDs, clinical records, chart notes, lab results, diagnoses, or any PHI — REFUSE IMMEDIATELY. Respond ONLY with: "STOP - I cannot process patient information. FELLITO is a workflow support tool only. Ask me about Epic workflows and I will help you sharp sharp."`;
 }
 
-// ─── Chat (requires auth) ─────────────────────────────────────────────────────
+// ─── Chat (requires auth) — streaming SSE ────────────────────────────────────
 app.post('/api/chat', requireAuth, async (req, res) => {
   const { model, messages, max_tokens, moduleTag, goLiveId, dept, goLive } = req.body;
   if (!model || !messages) return res.status(400).json({ error: 'Missing model or messages' });
@@ -188,7 +188,6 @@ app.post('/api/chat', requireAuth, async (req, res) => {
   try {
     let systemPrompt = buildServerSystemPrompt(moduleTag, dept, goLive);
 
-    // Inject RAG context
     const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
     if (lastUserMsg) {
       const sessionId = goLiveId || userId || 'standby';
@@ -196,22 +195,31 @@ app.post('/api/chat', requireAuth, async (req, res) => {
       if (ragContext) systemPrompt += '\n\nKNOWLEDGE BASE — use this if relevant:\n' + ragContext;
     }
 
-    // Inject user memory
     const memContext = buildMemoryContext(userId);
     if (memContext) systemPrompt += '\n\n' + memContext;
 
-    const response = await anthropic.messages.create({ model, system: systemPrompt, messages, max_tokens: max_tokens ?? 1024 });
-    const reply = response.content?.[0]?.text || '';
+    // Stream the response so the tunnel doesn't time out
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('X-Accel-Buffering', 'no');
 
-    // Update memory with this exchange
-    if (lastUserMsg) {
-      updateMemory(userId, { role: 'user',      content: lastUserMsg.content, module: moduleTag, dept, goLive });
-    }
-    if (reply) {
-      updateMemory(userId, { role: 'assistant', content: reply,               module: moduleTag, dept, goLive });
-    }
+    let fullReply = '';
+    const stream = anthropic.messages.stream({ model, system: systemPrompt, messages, max_tokens: max_tokens ?? 1024 });
 
-    // Auto-extract insight: if user asked about something specific, note it
+    for await (const chunk of stream) {
+      if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
+        const text = chunk.delta.text;
+        fullReply += text;
+        res.write('data: ' + JSON.stringify({ text }) + '\n\n');
+      }
+    }
+    res.write('data: [DONE]\n\n');
+    res.end();
+
+    // Post-stream memory updates
+    if (lastUserMsg) updateMemory(userId, { role: 'user', content: lastUserMsg.content, module: moduleTag, dept, goLive });
+    if (fullReply)   updateMemory(userId, { role: 'assistant', content: fullReply, module: moduleTag, dept, goLive });
+
     if (lastUserMsg && moduleTag) {
       const q = lastUserMsg.content.toLowerCase();
       if (q.includes('cosign'))       addInsight(userId, `Needs help with cosign workflows in ${moduleTag}`);
@@ -223,11 +231,10 @@ app.post('/api/chat', requireAuth, async (req, res) => {
       if (q.includes('transfer') || q.includes('discharge')) addInsight(userId, 'Frequently handles transfer/discharge workflows');
       if (q.includes('result') || q.includes('lab'))         addInsight(userId, 'Often asks about lab results and routing');
     }
-
-    res.json(response);
   } catch (err) {
     console.error('[Chat]', err.message);
-    res.status(500).json({ error: err.message });
+    if (!res.headersSent) res.status(500).json({ error: err.message });
+    else res.end();
   }
 });
 
@@ -556,9 +563,6 @@ textarea::placeholder{color:#8A8AA0;}
       <div class="header-sub" id="headerSub">${name} · Epic ATE Support</div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
-      <button onclick="triggerDowntime()" title="Downtime tips" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:20px;color:#FFB800;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:5px;">
-        ⏳ Downtime
-      </button>
       <button onclick="openNearby()" title="What's nearby?" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:20px;color:#00E5FF;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:5px;">
         📍 Nearby
       </button>
@@ -636,6 +640,9 @@ textarea::placeholder{color:#8A8AA0;}
       <div class="ctx-chip">Dept: <span id="ctxDept">—</span></div>
     </div>
     <div class="messages" id="messages"></div>
+    <div style="padding:6px 12px 0;display:flex;gap:8px;">
+      <button onclick="triggerDowntime()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#FFB800;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">⏳ Downtime</button>
+    </div>
     <div class="input-bar">
       <div class="input-wrap">
         <textarea id="input" placeholder="Ask FELLITO anything..." rows="1"></textarea>
@@ -1005,13 +1012,36 @@ async function sendMessage() {
     });
     hideTyping();
     if (res.status === 401) { expire(); return; }
-    const data = await res.json();
-    const reply = data.content?.[0]?.text ?? 'Connection issue — try again.';
-    addBubble('assistant', reply);
-    chatHistory.push({ role: 'assistant', content: reply });
+
+    // Read streaming SSE response
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '', fullReply = '', bubble = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const parts = buf.split('\\n\\n');
+      buf = parts.pop();
+      for (const part of parts) {
+        if (!part.startsWith('data: ')) continue;
+        const payload = part.slice(6);
+        if (payload === '[DONE]') break;
+        try {
+          const { text } = JSON.parse(payload);
+          fullReply += text;
+          if (!bubble) bubble = addBubble('assistant', fullReply);
+          else bubble.querySelector('p').textContent = fullReply;
+        } catch {}
+      }
+    }
+    if (!bubble && fullReply) addBubble('assistant', fullReply);
+    if (!fullReply) addBubble('assistant', 'Connection issue — try again.');
+    if (fullReply) chatHistory.push({ role: 'assistant', content: fullReply });
   } catch {
     hideTyping();
-    addBubble('assistant', 'Wahala with the connection. Check your network and try again.');
+    addBubble('assistant', 'Connection issue — try again.');
   }
   document.getElementById('sendBtn').disabled = false;
   ta.focus();
