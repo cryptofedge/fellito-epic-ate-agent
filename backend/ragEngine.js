@@ -117,14 +117,25 @@ async function ingestDocument(filePath, filename, sessionId, moduleTag) {
   return { docId, chunkCount: newChunks.length };
 }
 
-async function queryDocuments(question, sessionId, topK = 5) {
+async function queryDocuments(question, sessionId, topK = 5, moduleTag = null) {
   const qTokens = tokenize(question);
   const qVec = buildTfVector(qTokens);
 
-  // Filter to session chunks (plus any global/standby chunks)
-  const pool = chunks.filter(
-    (c) => c.sessionId === sessionId || c.sessionId === 'standby'
-  );
+  // Pull from three buckets (union, deduped by id):
+  // 1. Global module bucket  — sessionId === 'module:<tag>'
+  // 2. Go-Live specific docs — sessionId === goLiveId, matching module or untagged
+  // 3. Standby / legacy      — sessionId === 'standby'
+  const moduleSession = moduleTag ? 'module:' + moduleTag : null;
+
+  const pool = chunks.filter((c) => {
+    if (c.sessionId === 'standby') return true;
+    if (moduleSession && c.sessionId === moduleSession) return true;
+    if (c.sessionId === sessionId) {
+      // Go-Live doc: include if untagged or matches active module
+      return !moduleTag || !c.moduleTag || c.moduleTag === moduleTag;
+    }
+    return false;
+  });
 
   if (pool.length === 0) return '';
 

@@ -90,7 +90,8 @@ async function ingestLink(url, description, moduleTag, ingestDocFn) {
     const tmpPath = path.join(DATA_DIR, `link_${link.id}.txt`);
     fs.writeFileSync(tmpPath, text, 'utf8');
 
-    const result = await ingestDocFn(tmpPath, `[Link] ${description || url}`, 'links', moduleTag);
+    const effectiveSession = moduleTag ? 'module:' + moduleTag : 'links';
+    const result = await ingestDocFn(tmpPath, `[Link] ${description || url}`, effectiveSession, moduleTag);
     fs.unlink(tmpPath, () => {});
 
     // Update link record
