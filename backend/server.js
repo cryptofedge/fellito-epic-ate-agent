@@ -806,17 +806,6 @@ textarea::placeholder{color:#8A8AA0;}
     <button onclick="document.getElementById('phiOverlay').classList.remove('show')" style="background:#FF3B5C;color:#fff;border:none;border-radius:12px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;">Got It</button>
   </div>
 
-  <!-- Camera PHI warning modal (shown BEFORE camera opens) -->
-  <div class="expired-overlay" id="cameraWarningOverlay" style="z-index:102;">
-    <div style="font-size:48px;">📸</div>
-    <div style="font-size:17px;font-weight:900;color:#FFB800;letter-spacing:1px;">BEFORE YOU SNAP</div>
-    <div style="font-size:13px;color:#ccc;line-height:1.7;max-width:280px;">Make sure your photo contains <strong style="color:#fff;">NO patient information</strong> — no names, MRNs, DOBs, charts, or any data that could identify a patient.</div>
-    <div style="font-size:12px;color:#8A8AA0;line-height:1.6;max-width:280px;">If patient data is detected, the photo will be blocked automatically.</div>
-    <div style="display:flex;gap:12px;margin-top:8px;">
-      <button onclick="document.getElementById('cameraWarningOverlay').classList.remove('show')" style="background:#1E1E2E;color:#8A8AA0;border:1px solid #2E2E3E;border-radius:12px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;">Cancel</button>
-      <button onclick="confirmOpenCamera()" style="background:#00E5FF;color:#000;border:none;border-radius:12px;padding:12px 20px;font-size:14px;font-weight:800;cursor:pointer;">Open Camera</button>
-    </div>
-  </div>
 
   <div class="expired-overlay" id="expiredOverlay">
     <div style="font-size:48px;">⛔</div>
@@ -1083,11 +1072,6 @@ async function handleUpload(input) {
 
 // ── Camera + PHI gate ──────────────────────────────────────────────────────
 function openCamera() {
-  document.getElementById('cameraWarningOverlay').classList.add('show');
-}
-
-function confirmOpenCamera() {
-  document.getElementById('cameraWarningOverlay').classList.remove('show');
   document.getElementById('cameraInput').click();
 }
 
