@@ -35,6 +35,52 @@ app.use((_req, res, next) => {
 // Serve the admin portal as a static SPA
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
 
+// ─── PWA assets ──────────────────────────────────────────────────────────────
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
+app.get('/manifest.json', (_req, res) => {
+  res.json({
+    name: 'FELLITO — Epic ATE Support',
+    short_name: 'FELLITO',
+    description: 'Your Epic Go-Live AI support consultant',
+    start_url: '/app',
+    display: 'standalone',
+    orientation: 'portrait',
+    background_color: '#050508',
+    theme_color: '#00E5FF',
+    icons: [
+      { src: '/public/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+      { src: '/public/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+    ],
+  });
+});
+
+app.get('/sw.js', (_req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.send(`
+const CACHE = 'fellito-v1';
+const PRECACHE = ['/app', '/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
+
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(keys =>
+    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+  ).then(() => self.clients.claim()));
+});
+
+self.addEventListener('fetch', e => {
+  // Network-first for API calls, cache-first for static assets
+  if (e.request.url.includes('/api/') || e.request.method !== 'GET') return;
+  e.respondWith(
+    fetch(e.request).catch(() => caches.match(e.request))
+  );
+});
+`);
+});
+
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const upload = multer({
@@ -599,6 +645,14 @@ function buildChatPage(link, jwtToken, msLeft) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>FELLITO</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" href="/public/favicon.png">
+<meta name="theme-color" content="#00E5FF">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FELLITO">
+<link rel="apple-touch-icon" href="/public/icon-192.png">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;background:#050508;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow:hidden;}
@@ -837,6 +891,11 @@ function updateClock() {
   document.getElementById('clock').textContent = now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
 }
 updateClock(); setInterval(updateClock, 10000);
+
+// ── PWA service worker registration ────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
 
 // ── Countdown ──────────────────────────────────────────────────────────────
 const IS_PERM = SESSION_EXPIRES_AT === 0;
@@ -1467,6 +1526,14 @@ app.get('/app', (_req, res) => {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>FELLITO</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" href="/public/favicon.png">
+<meta name="theme-color" content="#00E5FF">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FELLITO">
+<link rel="apple-touch-icon" href="/public/icon-192.png">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{height:100%;background:#050508;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;}
@@ -1508,6 +1575,8 @@ async function doLogin() {
 // Auto-redirect if already logged in
 const t = localStorage.getItem('_ft');
 if (t) window.location.href = '/app/chat';
+// Register service worker
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 </script>
 </body>
 </html>`);
