@@ -140,7 +140,7 @@ function updateTeamMember(userId, updates) {
   const idx = users.findIndex((u) => u.id === userId);
   if (idx === -1) throw new Error('User not found');
 
-  const allowed = ['name', 'active', 'assignedGoLives', 'boundDeviceId'];
+  const allowed = ['name', 'active', 'assignedGoLives', 'boundDeviceId', 'role'];
   for (const key of allowed) {
     if (key in updates) users[idx][key] = updates[key];
   }
