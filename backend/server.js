@@ -732,8 +732,9 @@ textarea::placeholder{color:#8A8AA0;}
 </div></div>
 
 <script>
-const TOKEN = '${jwtToken}';
-const SESSION_EXPIRES_AT = ${link.sessionExpiresAt};
+const TOKEN = '${jwtToken}' === '__PERM__' ? (localStorage.getItem('_ft') || '') : '${jwtToken}';
+if ('${jwtToken}' === '__PERM__' && !TOKEN) { window.location.href = '/app'; }
+const SESSION_EXPIRES_AT = ${link.sessionExpiresAt ?? 0};
 const GOLIVE_ID = '${link.goLiveId || ''}';
 const USER_NAME = '${name}';
 const ALL_MODULES = ${JSON.stringify(ALL_MODULES)};
@@ -754,7 +755,13 @@ function updateClock() {
 updateClock(); setInterval(updateClock, 10000);
 
 // ── Countdown ──────────────────────────────────────────────────────────────
+const IS_PERM = SESSION_EXPIRES_AT === 0;
+if (IS_PERM) {
+  const pill = document.querySelector('.timer-pill');
+  if (pill) pill.style.display = 'none';
+}
 function updateTimer() {
+  if (IS_PERM) return;
   const ms = SESSION_EXPIRES_AT - Date.now();
   if (ms <= 0) { expire(); return; }
   const m = Math.floor(ms / 60000);
@@ -1243,6 +1250,66 @@ html,body{height:100%;background:#050508;display:flex;align-items:center;justify
 
 
 // ─── Root — Consultant entry page ─────────────────────────────────────────────
+// ─── /app — permanent login for owner + contributors ─────────────────────────
+app.get('/app', (_req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>FELLITO</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;background:#050508;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;}
+.card{width:100%;max-width:360px;padding:0 24px;}
+.logo{font-size:36px;font-weight:900;color:#00E5FF;letter-spacing:8px;text-align:center;margin-bottom:6px;}
+.sub{font-size:11px;color:#8A8AA0;letter-spacing:3px;text-align:center;margin-bottom:40px;}
+input{width:100%;background:#12121A;border:1px solid #1E1E2E;border-radius:12px;padding:14px 16px;color:#fff;font-size:15px;margin-bottom:12px;outline:none;}
+input:focus{border-color:#00E5FF;}
+button{width:100%;background:#00E5FF;color:#000;font-size:15px;font-weight:800;border:none;border-radius:12px;padding:16px;cursor:pointer;letter-spacing:1px;margin-top:4px;}
+.err{color:#FF4444;font-size:13px;text-align:center;margin-top:12px;display:none;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">FELLITO</div>
+  <div class="sub">ECLAT UNIVERSE · EPIC ATE SUPPORT</div>
+  <input id="email" type="email" placeholder="Email" autocomplete="email">
+  <input id="pass" type="password" placeholder="Password" autocomplete="current-password">
+  <button onclick="doLogin()">Enter →</button>
+  <div class="err" id="err"></div>
+</div>
+<script>
+document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+async function doLogin() {
+  const email = document.getElementById('email').value.trim();
+  const pass  = document.getElementById('pass').value;
+  const err   = document.getElementById('err');
+  err.style.display = 'none';
+  if (!email || !pass) { err.textContent = 'Enter email and password.'; err.style.display = 'block'; return; }
+  try {
+    const res  = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password: pass }) });
+    const data = await res.json();
+    if (!res.ok) { err.textContent = data.error || 'Login failed.'; err.style.display = 'block'; return; }
+    localStorage.setItem('_ft', data.token);
+    localStorage.setItem('_fu', JSON.stringify(data.user));
+    window.location.href = '/app/chat';
+  } catch { err.textContent = 'Connection issue — try again.'; err.style.display = 'block'; }
+}
+// Auto-redirect if already logged in
+const t = localStorage.getItem('_ft');
+if (t) window.location.href = '/app/chat';
+</script>
+</body>
+</html>`);
+});
+
+app.get('/app/chat', (_req, res) => {
+  const fakeLink = { label: '', id: 'perm', browserToken: null };
+  // Token is loaded from localStorage client-side; serve the shell with no token injected
+  res.send(buildChatPage(fakeLink, '__PERM__', null));
+});
+
 app.get('/', (_req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="en">
