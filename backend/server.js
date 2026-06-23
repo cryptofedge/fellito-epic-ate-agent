@@ -271,6 +271,52 @@ app.post('/api/invite', requireOwner, async (req, res) => {
 });
 
 // ─── Upload screenshot / tip sheet ───────────────────────────────────────────
+// ─── PHI scan — checks image before upload ────────────────────────────────────
+app.post('/api/scan-phi', requireAuth, upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  try {
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    const mediaType = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : ext === '.gif' ? 'image/gif' : 'image/jpeg';
+    const base64 = fs.readFileSync(req.file.path).toString('base64');
+    fs.unlink(req.file.path, () => {});
+
+    const result = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 300,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+          { type: 'text', text: `You are a HIPAA compliance scanner. Inspect this image for Protected Health Information (PHI).
+
+PHI includes: patient names, MRNs, dates of birth, medical record numbers, account numbers, Social Security numbers, phone numbers, addresses, email addresses, biometric identifiers, full face photos, any combination that could identify a patient.
+
+Epic EHR workflow screenshots often show these in the chart header, patient banner, or order screens.
+
+Respond ONLY with valid JSON — no other text:
+{"phi": true/false, "reason": "one-sentence explanation"}
+
+If you see ANY patient-identifying information, set phi to true.
+If the image is a blank workflow screenshot, tip sheet, training material, or has no patient data, set phi to false.` }
+        ]
+      }]
+    });
+
+    let parsed;
+    try {
+      const text = result.content[0]?.text || '{}';
+      parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
+    } catch {
+      parsed = { phi: false };
+    }
+
+    res.json({ phi: !!parsed.phi, reason: parsed.reason || '' });
+  } catch (err) {
+    fs.unlink(req.file.path, () => {});
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/upload', requireAuth, upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   const { goLiveId, moduleTag, goLive } = req.body;
@@ -710,8 +756,12 @@ textarea::placeholder{color:#8A8AA0;}
     </div>
     <div class="input-bar">
       <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none" onchange="handleUpload(this)">
+      <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none" onchange="handleCamera(this)">
       <button onclick="document.getElementById('fileInput').click()" title="Upload screenshot or tip sheet" style="background:none;border:none;color:#8A8AA0;cursor:pointer;padding:0 6px;display:flex;align-items:center;flex-shrink:0;" id="uploadBtn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+      </button>
+      <button onclick="openCamera()" title="Take a photo — no patient info allowed" style="background:none;border:none;color:#8A8AA0;cursor:pointer;padding:0 6px;display:flex;align-items:center;flex-shrink:0;" id="cameraBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
       </button>
       <div class="input-wrap">
         <textarea id="input" placeholder="Ask FELLITO anything..." rows="1"></textarea>
@@ -723,6 +773,27 @@ textarea::placeholder{color:#8A8AA0;}
   </div>
 
   <!-- Expired overlay -->
+  <!-- PHI warning overlay -->
+  <div class="expired-overlay" id="phiOverlay" style="z-index:101;">
+    <div style="font-size:48px;">🚫</div>
+    <div style="font-size:18px;font-weight:900;color:#FF3B5C;letter-spacing:1px;">PHI DETECTED</div>
+    <div style="font-size:13px;color:#ccc;line-height:1.7;max-width:280px;" id="phiReason">This photo contains patient information and cannot be uploaded.</div>
+    <div style="font-size:12px;color:#8A8AA0;line-height:1.6;max-width:280px;">FELLITO never stores or transmits patient data. Remove all patient identifiers and try again.</div>
+    <button onclick="document.getElementById('phiOverlay').classList.remove('show')" style="background:#FF3B5C;color:#fff;border:none;border-radius:12px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;">Got It</button>
+  </div>
+
+  <!-- Camera PHI warning modal (shown BEFORE camera opens) -->
+  <div class="expired-overlay" id="cameraWarningOverlay" style="z-index:102;">
+    <div style="font-size:48px;">📸</div>
+    <div style="font-size:17px;font-weight:900;color:#FFB800;letter-spacing:1px;">BEFORE YOU SNAP</div>
+    <div style="font-size:13px;color:#ccc;line-height:1.7;max-width:280px;">Make sure your photo contains <strong style="color:#fff;">NO patient information</strong> — no names, MRNs, DOBs, charts, or any data that could identify a patient.</div>
+    <div style="font-size:12px;color:#8A8AA0;line-height:1.6;max-width:280px;">If patient data is detected, the photo will be blocked automatically.</div>
+    <div style="display:flex;gap:12px;margin-top:8px;">
+      <button onclick="document.getElementById('cameraWarningOverlay').classList.remove('show')" style="background:#1E1E2E;color:#8A8AA0;border:1px solid #2E2E3E;border-radius:12px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;">Cancel</button>
+      <button onclick="confirmOpenCamera()" style="background:#00E5FF;color:#000;border:none;border-radius:12px;padding:12px 20px;font-size:14px;font-weight:800;cursor:pointer;">Open Camera</button>
+    </div>
+  </div>
+
   <div class="expired-overlay" id="expiredOverlay">
     <div style="font-size:48px;">⛔</div>
     <div style="font-size:20px;font-weight:900;color:#FF3B5C;">Session Expired</div>
@@ -984,6 +1055,83 @@ async function handleUpload(input) {
 
   uploadBtn.style.color = '#8A8AA0';
   uploadBtn.style.pointerEvents = 'auto';
+}
+
+// ── Camera + PHI gate ──────────────────────────────────────────────────────
+function openCamera() {
+  document.getElementById('cameraWarningOverlay').classList.add('show');
+}
+
+function confirmOpenCamera() {
+  document.getElementById('cameraWarningOverlay').classList.remove('show');
+  document.getElementById('cameraInput').click();
+}
+
+async function handleCamera(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  const cameraBtn = document.getElementById('cameraBtn');
+  cameraBtn.style.color = '#FFB800';
+  cameraBtn.style.pointerEvents = 'none';
+
+  addBubble('user', '📸 Scanning photo for patient information...');
+  showTyping();
+
+  const scanForm = new FormData();
+  scanForm.append('file', file, file.name || 'photo.jpg');
+
+  try {
+    const scanRes = await fetch('/api/scan-phi', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + TOKEN },
+      body: scanForm,
+    });
+    const scanData = await scanRes.json();
+    hideTyping();
+
+    if (scanData.phi) {
+      document.getElementById('phiReason').textContent = scanData.reason || 'This photo contains patient information and cannot be uploaded.';
+      document.getElementById('phiOverlay').classList.add('show');
+      addBubble('assistant', 'Photo blocked — patient information detected. Remove all patient identifiers and try again.');
+      cameraBtn.style.color = '#8A8AA0';
+      cameraBtn.style.pointerEvents = 'auto';
+      return;
+    }
+
+    // PHI-free — proceed to upload
+    addBubble('assistant', 'No patient information detected. Uploading photo...');
+    showTyping();
+
+    const uploadForm = new FormData();
+    uploadForm.append('file', file, file.name || 'photo.jpg');
+    uploadForm.append('goLiveId', selectedGoLiveId || '');
+    uploadForm.append('moduleTag', selectedModule || '');
+    uploadForm.append('goLive', selectedGoLive || '');
+
+    const uploadRes = await fetch('/api/upload', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + TOKEN },
+      body: uploadForm,
+    });
+    hideTyping();
+    const uploadData = await uploadRes.json();
+
+    if (!uploadRes.ok) {
+      addBubble('assistant', 'Upload failed — ' + (uploadData.error || 'try again.'));
+    } else {
+      const preview = uploadData.preview ? " Here\\'s what I picked up: " + uploadData.preview.slice(0, 120) + '...' : '';
+      addBubble('assistant', 'Photo locked in for this Go-Live.' + preview + ' Ask me anything about it.');
+      chatHistory.push({ role: 'assistant', content: 'Camera photo uploaded and indexed.' });
+    }
+  } catch {
+    hideTyping();
+    addBubble('assistant', 'Connection issue — try again.');
+  }
+
+  cameraBtn.style.color = '#8A8AA0';
+  cameraBtn.style.pointerEvents = 'auto';
 }
 
 // ── Nearby ─────────────────────────────────────────────────────────────────
