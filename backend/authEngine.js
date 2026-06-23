@@ -74,17 +74,7 @@ async function login(email, password, deviceId) {
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) throw new Error('Invalid credentials');
 
-  // Device binding — owner is exempt (logs in from admin portal too)
-  if (user.role !== 'owner' && deviceId) {
-    if (!user.boundDeviceId) {
-      // First login — bind this device
-      const idx = users.findIndex((u) => u.id === user.id);
-      users[idx].boundDeviceId = deviceId;
-      saveUsers(users);
-    } else if (user.boundDeviceId !== deviceId) {
-      throw new Error('This account is linked to another device. Contact your administrator.');
-    }
-  }
+  // No device binding — all users can log in from any device
 
   const token = jwt.sign(
     { sub: user.id, email: user.email, role: user.role },
