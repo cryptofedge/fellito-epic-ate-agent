@@ -155,11 +155,13 @@ async function queryDocuments(question, sessionId, topK = 5, moduleTag = null) {
 async function listDocuments(sessionId) {
   const seen = new Set();
   const docs = [];
-  for (const c of chunks) {
-    if (c.sessionId === sessionId && !seen.has(c.docId)) {
+  // If no sessionId provided, return all docs
+  const filtered = sessionId ? chunks.filter(c => c.sessionId === sessionId) : chunks;
+  for (const c of filtered) {
+    if (!seen.has(c.docId)) {
       seen.add(c.docId);
       const docChunks = chunks.filter((x) => x.docId === c.docId);
-      docs.push({ id: c.docId, filename: c.filename, chunkCount: docChunks.length });
+      docs.push({ id: c.docId, filename: c.filename, sessionId: c.sessionId, moduleTag: c.moduleTag || '', chunkCount: docChunks.length });
     }
   }
   return docs;

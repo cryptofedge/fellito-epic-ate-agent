@@ -18,6 +18,7 @@ function requireAuth(req, res, next) {
       // Attach a synthetic user object for temp sessions
       req.user = {
         id: payload.sub,
+        linkId: payload.linkId,
         name: payload.name ?? 'Guest',
         email: payload.email ?? '',
         role: 'contributor',

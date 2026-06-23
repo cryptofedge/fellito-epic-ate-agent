@@ -10,7 +10,7 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 const LINK_TTL_MS    = 10 * 60 * 1000; // 10 min to first open
 const SESSION_TTL_MS = 10 * 60 * 1000; // 10 min of chat after opening
 
-const PURGE_AFTER_MS = 24 * 60 * 60 * 1000; // keep expired/revoked for 24h then drop
+const PURGE_AFTER_MS = 2 * 60 * 60 * 1000; // keep expired/revoked for 2h then drop
 
 function load() {
   if (!fs.existsSync(FILE)) return [];

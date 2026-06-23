@@ -327,23 +327,38 @@ app.post('/api/upload', requireAuth, upload.single('file'), async (req, res) => 
     let extractedText = '';
 
     if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) {
-      // Use Claude Vision to extract content from the image
-      const imageData = fs.readFileSync(req.file.path);
-      const base64 = imageData.toString('base64');
+      // Single Vision call: PHI check + content extraction together
+      const base64 = fs.readFileSync(req.file.path).toString('base64');
       const mediaType = ext === '.png' ? 'image/png' : ext === '.gif' ? 'image/gif' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
 
       const visionRes = await anthropic.messages.create({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1024,
+        max_tokens: 1200,
         messages: [{
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-            { type: 'text', text: 'You are extracting content from an Epic EHR Go-Live tip sheet or screenshot. Extract ALL visible text exactly as shown. Also describe any workflow steps, buttons, menu paths, or instructions you see. Be thorough — this will be used to answer Epic workflow questions for consultants on the floor.' }
+            { type: 'text', text: `You are a HIPAA-compliant Epic EHR content extractor.
+
+STEP 1 — PHI CHECK: Scan for Protected Health Information (patient names, MRNs, DOBs, SSNs, account numbers, addresses, phone numbers, or any data that could identify a patient). If ANY PHI is found, respond ONLY with this JSON and nothing else:
+{"phi":true,"reason":"<one sentence describing what was found>"}
+
+STEP 2 — EXTRACT (only if no PHI): Extract ALL visible text, workflow steps, button labels, menu paths, and instructions from this Epic EHR tip sheet or screenshot. Be thorough — this will answer consultant questions on the floor.` }
           ]
         }]
       });
-      extractedText = '[Screenshot: ' + req.file.originalname + ']\n' + (visionRes.content[0]?.text || '');
+
+      const raw = visionRes.content[0]?.text || '';
+      // Check if Vision flagged PHI
+      const phiMatch = raw.match(/\{"phi"\s*:\s*true[\s\S]*?\}/);
+      if (phiMatch) {
+        let reason = 'Patient information detected.';
+        try { reason = JSON.parse(phiMatch[0]).reason || reason; } catch {}
+        fs.unlink(req.file.path, () => {});
+        return res.status(422).json({ phi: true, reason });
+      }
+
+      extractedText = '[Screenshot: ' + req.file.originalname + ']\n' + raw;
     } else {
       // PDF or text — use existing RAG ingest
       const result = await ingestDocument(req.file.path, req.file.originalname, sessionId, moduleTag || null);
@@ -422,10 +437,15 @@ app.get('/api/issues', requireAuth, (req, res) => {
 });
 
 app.post('/api/issues', requireAuth, (req, res) => {
-  const { goLiveId, title, description, module, department, severity } = req.body;
+  const { goLiveId, title, description, module, moduleTag, department, dept, severity } = req.body;
   if (!title) return res.status(400).json({ error: 'title required' });
   try {
-    const issue = createIssue({ goLiveId, title, description, module, department, severity, reportedBy: req.user.email });
+    const issue = createIssue({
+      goLiveId, title, description, severity,
+      module: module || moduleTag || '',
+      department: department || dept || '',
+      reportedBy: req.user.email,
+    });
     res.json(issue);
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
@@ -641,6 +661,7 @@ textarea::placeholder{color:#8A8AA0;}
 .send-btn svg{fill:#000;}
 .send-btn:disabled{background:#1E1E2E;cursor:not-allowed;}
 .send-btn:disabled svg{fill:#8A8AA0;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
 
 /* expired overlay */
 .expired-overlay{display:none;position:absolute;inset:0;background:rgba(10,10,15,.97);border-radius:44px;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:32px;text-align:center;z-index:100;}
@@ -768,6 +789,9 @@ textarea::placeholder{color:#8A8AA0;}
       </div>
       <button class="send-btn" id="sendBtn" onclick="sendMessage()">
         <svg width="18" height="18" viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+      </button>
+      <button id="micBtn" onclick="toggleMic()" title="Voice input" style="background:none;border:none;color:#8A8AA0;cursor:pointer;padding:0 6px;display:flex;align-items:center;flex-shrink:0;">
+        <svg id="micIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
       </button>
     </div>
   </div>
@@ -1132,6 +1156,59 @@ async function handleCamera(input) {
 
   cameraBtn.style.color = '#8A8AA0';
   cameraBtn.style.pointerEvents = 'auto';
+}
+
+// ── Mic / Speech-to-text ───────────────────────────────────────────────────
+let micRecog = null;
+let micActive = false;
+
+function toggleMic() {
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    addBubble('assistant', 'Voice input is not supported on this browser. Try Chrome on Android or desktop.');
+    return;
+  }
+  if (micActive) {
+    micRecog && micRecog.stop();
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  micRecog = new SR();
+  micRecog.lang = 'en-US';
+  micRecog.continuous = false;
+  micRecog.interimResults = true;
+
+  const btn = document.getElementById('micBtn');
+  const icon = document.getElementById('micIcon');
+  const ta = document.getElementById('input');
+
+  micRecog.onstart = () => {
+    micActive = true;
+    btn.style.color = '#FF3B5C';
+    icon.style.animation = 'pulse 1s infinite';
+  };
+
+  micRecog.onresult = (e) => {
+    let transcript = '';
+    for (let i = 0; i < e.results.length; i++) transcript += e.results[i][0].transcript;
+    ta.value = transcript;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
+  };
+
+  micRecog.onend = () => {
+    micActive = false;
+    btn.style.color = '#8A8AA0';
+    icon.style.animation = '';
+    if (ta.value.trim()) sendMessage();
+  };
+
+  micRecog.onerror = () => {
+    micActive = false;
+    btn.style.color = '#8A8AA0';
+    icon.style.animation = '';
+  };
+
+  micRecog.start();
 }
 
 // ── Nearby ─────────────────────────────────────────────────────────────────
