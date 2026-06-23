@@ -13,7 +13,7 @@ const { requireAuth, requireOwner } = require('./authMiddleware');
 const { listGoLives, createGoLive, updateGoLive, deleteGoLive } = require('./goLiveStore');
 const { listIssues, createIssue, updateIssue, deleteIssue, generateReport } = require('./issuesStore');
 const { listLinks, ingestLink, deleteLink } = require('./linksEngine');
-const { updateMemory, buildMemoryContext, addInsight, listAllMemory } = require('./memoryEngine');
+const { updateMemory, buildMemoryContext, addInsight, listAllMemory, closeSession } = require('./memoryEngine');
 const { createTempLink, listTempLinks, openLink, revokeTempLink, validateTempSession, SESSION_TTL_MS } = require('./tempLinkStore');
 const { sendInviteEmail } = require('./emailService');
 const cookieParser = require('cookie-parser');
@@ -280,7 +280,7 @@ app.post('/api/chat', requireAuth, async (req, res) => {
   const { model, messages, max_tokens, moduleTag, goLiveId, dept, goLive } = req.body;
   if (!model || !messages) return res.status(400).json({ error: 'Missing model or messages' });
 
-  const userId = req.user.linkId || req.user.sub || 'anon';
+  const userId = req.user.id || req.user.linkId || req.user.sub || 'anon';
 
   try {
     let systemPrompt = buildServerSystemPrompt(moduleTag, dept, goLive);
@@ -314,8 +314,9 @@ app.post('/api/chat', requireAuth, async (req, res) => {
     res.end();
 
     // Post-stream memory updates
-    if (lastUserMsg) updateMemory(userId, { role: 'user', content: lastUserMsg.content, module: moduleTag, dept, goLive });
-    if (fullReply)   updateMemory(userId, { role: 'assistant', content: fullReply, module: moduleTag, dept, goLive });
+    const userName = req.user.name || req.user.email || null;
+    if (lastUserMsg) updateMemory(userId, { role: 'user', content: lastUserMsg.content, module: moduleTag, dept, goLive, userName });
+    if (fullReply)   updateMemory(userId, { role: 'assistant', content: fullReply, module: moduleTag, dept, goLive, userName });
 
     if (lastUserMsg && moduleTag) {
       const q = lastUserMsg.content.toLowerCase();
@@ -487,6 +488,20 @@ app.post('/api/rag/query', requireAuth, async (req, res) => {
   } catch (err) {
     res.json({ context: '' });
   }
+});
+
+// ─── Session close — saves Go-Live journal entry ─────────────────────────────
+// Accepts token via header OR query string (sendBeacon can't set headers)
+app.post('/api/session/close', (req, res) => {
+  const { verifyToken, getUserById } = require('./authEngine');
+  const rawToken = (req.headers['authorization'] || '').replace('Bearer ', '') || req.query._tok || '';
+  if (!rawToken) return res.json({ ok: false });
+  try {
+    const payload = verifyToken(rawToken);
+    const userId = payload.linkId || payload.sub || 'anon';
+    const journal = closeSession(userId);
+    res.json({ ok: true, journal });
+  } catch { res.json({ ok: false }); }
 });
 
 // ─── RAG: List docs (requires auth) ───────────────────────────────────────────
@@ -947,6 +962,19 @@ updateClock(); setInterval(updateClock, 10000);
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(() => {});
 }
+
+// ── Session close — fires when user leaves, logs out, or closes tab ─────────
+function closeSessionOnServer() {
+  const tok = TOKEN || localStorage.getItem('_ft') || '';
+  if (!tok) return;
+  // Use sendBeacon so it fires even on page close
+  const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
+  navigator.sendBeacon
+    ? navigator.sendBeacon('/api/session/close?_tok=' + encodeURIComponent(tok), blob)
+    : fetch('/api/session/close', { method: 'POST', headers: { 'Authorization': 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: '{}', keepalive: true }).catch(() => {});
+}
+window.addEventListener('pagehide', closeSessionOnServer);
+window.addEventListener('beforeunload', closeSessionOnServer);
 
 // ── Countdown ──────────────────────────────────────────────────────────────
 const IS_PERM = SESSION_EXPIRES_AT === 0;
