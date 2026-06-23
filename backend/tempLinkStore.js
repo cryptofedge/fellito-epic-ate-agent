@@ -10,12 +10,23 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 const LINK_TTL_MS    = 10 * 60 * 1000; // 10 min to first open
 const SESSION_TTL_MS = 10 * 60 * 1000; // 10 min of chat after opening
 
+const PURGE_AFTER_MS = 24 * 60 * 60 * 1000; // keep expired/revoked for 24h then drop
+
 function load() {
   if (!fs.existsSync(FILE)) return [];
   try { return JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch { return []; }
 }
 function save(links) {
-  fs.writeFileSync(FILE, JSON.stringify(links, null, 2), 'utf8');
+  const now = Date.now();
+  const clean = links.filter((l) => {
+    if (l.status === 'revoked')  return now - (l.revokedAt || l.createdAt) < PURGE_AFTER_MS;
+    if (l.status === 'expired')  return now - (l.sessionExpiresAt || l.linkExpiresAt) < PURGE_AFTER_MS;
+    // pending/active: drop if both link expiry and session expiry (if set) have passed by 24h
+    const expiry = l.sessionExpiresAt || l.linkExpiresAt;
+    if (now - expiry > PURGE_AFTER_MS) return false;
+    return true;
+  });
+  fs.writeFileSync(FILE, JSON.stringify(clean, null, 2), 'utf8');
 }
 
 function createTempLink({ label = '', goLiveId = null, assignedModules = [] } = {}) {
