@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v8';
+const CACHE = 'fellito-v9';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -744,11 +744,11 @@ html,body{height:100%;height:100dvh;background:#050508;color:#fff;font-family:-a
 .timer-text{font-size:12px;font-weight:800;color:#FFB800;font-family:'Courier New',monospace;}
 
 /* ── SCREENS ── */
-.screen{display:none;flex:1;flex-direction:column;overflow:hidden;}
+.screen{display:none;flex:1;flex-direction:column;min-height:0;}
 .screen.active{display:flex;}
 
 /* welcome screen */
-.welcome-body{flex:1;overflow-y:auto;padding:24px 20px;display:flex;flex-direction:column;gap:16px;}
+.welcome-body{flex:1;overflow-y:auto;min-height:0;padding:24px 20px;display:flex;flex-direction:column;gap:16px;}
 .welcome-body::-webkit-scrollbar{width:0;}
 .golive-card{background:#12121A;border:1px solid #00E5FF;border-radius:16px;padding:18px;}
 .golive-tag{font-size:10px;color:#00E5FF;font-weight:700;letter-spacing:2px;margin-bottom:6px;}
@@ -763,7 +763,7 @@ html,body{height:100%;height:100dvh;background:#050508;color:#fff;font-family:-a
 .start-btn:disabled{opacity:.4;cursor:not-allowed;}
 
 /* chat screen */
-.messages{flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;}
+.messages{flex:1;overflow-y:auto;min-height:0;padding:16px 12px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;}
 .messages::-webkit-scrollbar{width:0;}
 .bubble{max-width:82%;padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.5;word-break:break-word;}
 .bubble.user{background:#00E5FF;color:#000;font-weight:600;border-bottom-right-radius:4px;align-self:flex-end;}
@@ -793,13 +793,11 @@ textarea::placeholder{color:#8A8AA0;}
 
 @media(max-width:480px){
   .shell{padding:0;}
-  .phone{max-width:100%;height:100dvh;border-radius:0;border:none;box-shadow:none;}
+  .phone{max-width:100%;height:100dvh;border-radius:0;border:none;box-shadow:none;padding-bottom:env(safe-area-inset-bottom);}
   .expired-overlay{border-radius:0;}
   .status-bar{display:none;}
-  .welcome-footer{position:fixed;bottom:0;left:0;right:0;padding:14px 20px;padding-bottom:max(env(safe-area-inset-bottom),20px);border-top:1px solid #1E1E2E;border-radius:20px 20px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,.5);}
-  .welcome-body{padding-bottom:90px;}
-  .chat-footer{position:fixed;bottom:0;left:0;right:0;padding-bottom:max(env(safe-area-inset-bottom),8px);border-radius:20px 20px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,.5);}
-  .messages{padding-bottom:20px;}
+  .welcome-footer{border-radius:20px 20px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,.5);}
+  .chat-footer{border-radius:20px 20px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,.5);}
 }
 </style>
 </head>
