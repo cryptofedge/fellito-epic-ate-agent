@@ -793,13 +793,14 @@ textarea::placeholder{color:#8A8AA0;}
 
 @media(max-width:480px){
   .shell{padding:0;}
-  .phone{max-width:100%;height:100dvh;border-radius:0;border:none;box-shadow:none;}
+  .phone{max-width:100%;height:100dvh;border-radius:0;border:none;box-shadow:none;overflow:hidden;}
   .expired-overlay{border-radius:0;}
   .status-bar{display:none;}
-  .welcome-footer{position:fixed;bottom:0;left:0;right:0;padding:14px 20px;padding-bottom:max(env(safe-area-inset-bottom),72px);border-radius:20px 20px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,.5);}
-  .welcome-body{padding-bottom:130px;}
-  .chat-footer{position:fixed;bottom:0;left:0;right:0;padding-bottom:max(env(safe-area-inset-bottom),72px);border-radius:20px 20px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,.5);}
-  .messages{padding-bottom:130px;}
+  /* Stay in flex — do NOT use position:fixed (Samsung overflow:hidden clips fixed children) */
+  .welcome-footer{position:static;padding:14px 20px 16px;}
+  .welcome-body{flex:1;overflow-y:auto;}
+  .chat-footer{position:static;}
+  .messages{flex:1;overflow-y:auto;padding-bottom:8px;}
 }
 </style>
 </head>
