@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v17';
+const CACHE = 'fellito-v18';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -971,12 +971,9 @@ textarea::placeholder{color:#8A8AA0;}
       <button class="send-btn" id="sendBtn" onclick="sendMessage()">
         <svg width="18" height="18" viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
       </button>
-      <button id="micBtn" onclick="toggleMic()" title="Voice input" style="background:none;border:none;color:#8A8AA0;cursor:pointer;padding:0 6px;display:flex;align-items:center;flex-shrink:0;">
-        <svg id="micIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
-      </button>
-      <button id="voiceBtn" onclick="toggleVoice()" title="FELLITO voice OFF — tap to enable" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:20px;color:#8A8AA0;cursor:pointer;padding:5px 10px;display:flex;align-items:center;gap:4px;flex-shrink:0;font-size:11px;font-weight:700;letter-spacing:.5px;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path id="voiceWave" d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="#8A8AA0"/></svg>
-        <span id="voiceBtnLabel">VOICE</span>
+      <button id="talkBtn" onclick="startTalkMode()" style="background:linear-gradient(135deg,#00E5FF,#0070FF);border:none;border-radius:24px;color:#000;cursor:pointer;padding:8px 16px;display:flex;align-items:center;gap:6px;flex-shrink:0;font-size:12px;font-weight:900;letter-spacing:.5px;transition:all .2s;">
+        <svg id="talkIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
+        <span id="talkBtnLabel">TALK</span>
       </button>
     </div>
     </div><!-- /chat-footer -->
@@ -1389,6 +1386,43 @@ function toggleSettings() {
   p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
 }
 
+// ── TALK button — unified mic + voice loop ─────────────────────────────────
+let talkModeActive = false;
+
+function setTalkBtn(state) {
+  const btn = document.getElementById('talkBtn');
+  const lbl = document.getElementById('talkBtnLabel');
+  if (!btn) return;
+  if (state === 'idle') {
+    btn.style.background = 'linear-gradient(135deg,#00E5FF,#0070FF)';
+    btn.style.color = '#000';
+    if (lbl) lbl.textContent = 'TALK';
+  } else if (state === 'listening') {
+    btn.style.background = '#FF3B5C';
+    btn.style.color = '#fff';
+    if (lbl) lbl.textContent = '🎙️ LISTENING';
+  } else if (state === 'speaking') {
+    btn.style.background = '#00E5FF33';
+    btn.style.color = '#00E5FF';
+    if (lbl) lbl.textContent = '🔊 SPEAKING';
+  }
+}
+
+function startTalkMode() {
+  if (talkModeActive && micActive) {
+    // Second tap while listening = stop talk mode
+    talkModeActive = false;
+    voiceEnabled = false;
+    micRecog && micRecog.stop();
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    setTalkBtn('idle');
+    return;
+  }
+  talkModeActive = true;
+  voiceEnabled = true;
+  _internalToggleMic();
+}
+
 // ── Voice Clone Recording ──────────────────────────────────────────────────
 let mediaRecorder = null;
 let recordingChunks = [];
@@ -1458,44 +1492,17 @@ async function toggleVoiceRecord() {
 let voiceEnabled = false;
 let currentAudio = null;
 
-function toggleVoice() {
-  voiceEnabled = !voiceEnabled;
-  const btn = document.getElementById('voiceBtn');
-  const wave = document.getElementById('voiceWave');
-  const label = document.getElementById('voiceBtnLabel');
-  if (voiceEnabled) {
-    btn.style.color = '#00E5FF';
-    btn.style.borderColor = '#00E5FF';
-    btn.style.background = '#00E5FF22';
-    wave.setAttribute('stroke', '#00E5FF');
-    if (label) label.textContent = 'VOICE ON';
-    btn.title = 'FELLITO voice ON — tap to mute';
-  } else {
-    btn.style.color = '#8A8AA0';
-    btn.style.borderColor = '#2A2A3E';
-    btn.style.background = '#1E1E2E';
-    wave.setAttribute('stroke', '#8A8AA0');
-    if (label) label.textContent = 'VOICE';
-    btn.title = 'FELLITO voice OFF — tap to enable';
-    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-  }
-}
-
 async function speakReply(text) {
   if (!voiceEnabled || !text) return;
   try {
     if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-    // Show speaking indicator
-    const voiceBtn = document.getElementById('voiceBtn');
-    const lbl = document.getElementById('voiceBtnLabel');
-    if (lbl) lbl.textContent = '🔊 SPEAKING';
-
+    setTalkBtn('speaking');
     const r = await fetch('/api/tts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
       body: JSON.stringify({ text }),
     });
-    if (!r.ok) { if (lbl) lbl.textContent = 'VOICE ON'; return; }
+    if (!r.ok) { setTalkBtn('idle'); talkModeActive = false; return; }
     const blob = await r.blob();
     const url = URL.createObjectURL(blob);
     currentAudio = new Audio(url);
@@ -1503,13 +1510,13 @@ async function speakReply(text) {
     currentAudio.onended = () => {
       URL.revokeObjectURL(url);
       currentAudio = null;
-      if (lbl) lbl.textContent = 'VOICE ON';
-      // Hands-free: auto-activate mic after FELLITO finishes speaking
-      if (voiceEnabled) setTimeout(() => toggleMic(), 400);
+      // Auto-loop: listen again after FELLITO finishes speaking
+      if (talkModeActive) setTimeout(() => startTalkMode(), 400);
+      else setTalkBtn('idle');
     };
   } catch {
-    const lbl = document.getElementById('voiceBtnLabel');
-    if (lbl) lbl.textContent = 'VOICE ON';
+    setTalkBtn('idle');
+    talkModeActive = false;
   }
 }
 
@@ -1518,55 +1525,39 @@ let micRecog = null;
 let micActive = false;
 
 function toggleMic() {
+  // Legacy alias — just calls startTalkMode
+  startTalkMode();
+}
+
+function _internalToggleMic() {
   if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-    addBubble('assistant', 'Voice input is not supported on this browser. Try Chrome on Android or desktop.');
+    addBubble('assistant', 'Voice input not supported on this browser — try Chrome.');
     return;
   }
-  if (micActive) {
-    micRecog && micRecog.stop();
-    return;
-  }
+  if (micActive) { micRecog && micRecog.stop(); return; }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   micRecog = new SR();
   micRecog.lang = 'en-US';
   micRecog.continuous = false;
   micRecog.interimResults = true;
-
-  const btn = document.getElementById('micBtn');
-  const icon = document.getElementById('micIcon');
   const ta = document.getElementById('input');
-
-  micRecog.onstart = () => {
-    micActive = true;
-    btn.style.color = '#FF3B5C';
-    icon.style.animation = 'pulse 1s infinite';
-    const lbl = document.getElementById('voiceBtnLabel');
-    if (voiceEnabled && lbl) lbl.textContent = '🎙️ LISTENING';
-  };
-
+  micRecog.onstart = () => { micActive = true; setTalkBtn('listening'); };
   micRecog.onresult = (e) => {
-    let transcript = '';
-    for (let i = 0; i < e.results.length; i++) transcript += e.results[i][0].transcript;
-    ta.value = transcript;
-    ta.style.height = 'auto';
-    ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
+    let t = '';
+    for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+    ta.value = t;
   };
-
   micRecog.onend = () => {
     micActive = false;
-    btn.style.color = '#8A8AA0';
-    icon.style.animation = '';
-    const lbl = document.getElementById('voiceBtnLabel');
-    if (voiceEnabled && lbl) lbl.textContent = 'VOICE ON';
+    if (!talkModeActive) { setTalkBtn('idle'); return; }
     if (ta.value.trim()) sendMessage();
+    else if (talkModeActive) setTimeout(() => startTalkMode(), 600);
   };
-
-  micRecog.onerror = () => {
+  micRecog.onerror = (err) => {
     micActive = false;
-    btn.style.color = '#8A8AA0';
-    icon.style.animation = '';
-    const lbl = document.getElementById('voiceBtnLabel');
-    if (voiceEnabled && lbl) lbl.textContent = 'VOICE ON';
+    if (err.error === 'aborted') return;
+    setTalkBtn('idle');
+    talkModeActive = false;
   };
 
   micRecog.start();
