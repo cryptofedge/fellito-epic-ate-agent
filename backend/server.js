@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v15';
+const CACHE = 'fellito-v16';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -546,6 +546,31 @@ app.post('/api/tts', requireAuth, async (req, res) => {
   }
 });
 
+// ─── ElevenLabs Voice Sample — add recording to improve voice clone ───────────
+app.post('/api/voice-sample', requireAuth, upload.single('audio'), async (req, res) => {
+  const apiKey  = process.env.ELEVENLABS_API_KEY;
+  const voiceId = process.env.ELEVENLABS_VOICE_ID;
+  if (!apiKey || !voiceId) return res.status(503).json({ error: 'ElevenLabs not configured' });
+  if (!req.file) return res.status(400).json({ error: 'No audio file received' });
+  try {
+    const FormData = require('form-data');
+    const form = new FormData();
+    form.append('name', 'FELLITO');
+    form.append('files', fs.createReadStream(req.file.path), { filename: 'sample.webm', contentType: 'audio/webm' });
+    const r = await axios.post(
+      `https://api.elevenlabs.io/v1/voices/${voiceId}/edit`,
+      form,
+      { headers: { 'xi-api-key': apiKey, ...form.getHeaders() } }
+    );
+    fs.unlink(req.file.path, () => {});
+    res.json({ ok: true });
+  } catch (err) {
+    fs.unlink(req.file.path, () => {});
+    console.error('[VoiceSample]', err.response?.data || err.message);
+    res.status(500).json({ error: err.response?.data?.detail?.message || err.message });
+  }
+});
+
 // ─── Links Library ────────────────────────────────────────────────────────────
 app.get('/api/links', requireAuth, (_req, res) => res.json(listLinks()));
 
@@ -894,6 +919,17 @@ textarea::placeholder{color:#8A8AA0;}
           <li>Any PHI in any form</li>
         </ul>
         <div style="font-size:11px;color:#FF3B5C;font-weight:800;letter-spacing:1px;">ANY SUCH INFORMATION WILL BE IMMEDIATELY REJECTED.</div>
+      </div>
+
+      <div>
+        <div class="section-title">VOICE CLONE</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <button id="recordVoiceBtn" onclick="toggleVoiceRecord()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:20px;color:#00E5FF;font-size:12px;font-weight:700;padding:8px 16px;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:6px;">
+            🎙️ <span id="recordVoiceLbl">Record Voice Sample</span>
+          </button>
+          <div id="recordVoiceStatus" style="font-size:11px;color:#8A8AA0;"></div>
+        </div>
+        <div style="font-size:11px;color:#555;margin-top:6px;">Tap record, talk naturally for 30–60 sec, tap stop — your clone gets sharper every time.</div>
       </div>
 
       <div>
@@ -1340,6 +1376,71 @@ async function handleCamera(input) {
 
   cameraBtn.style.color = '#8A8AA0';
   cameraBtn.style.pointerEvents = 'auto';
+}
+
+// ── Voice Clone Recording ──────────────────────────────────────────────────
+let mediaRecorder = null;
+let recordingChunks = [];
+let isRecording = false;
+
+async function toggleVoiceRecord() {
+  const btn = document.getElementById('recordVoiceBtn');
+  const lbl = document.getElementById('recordVoiceLbl');
+  const status = document.getElementById('recordVoiceStatus');
+
+  if (isRecording) {
+    // Stop recording
+    mediaRecorder && mediaRecorder.stop();
+    return;
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    recordingChunks = [];
+    mediaRecorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg' });
+
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordingChunks.push(e.data); };
+
+    mediaRecorder.onstart = () => {
+      isRecording = true;
+      btn.style.borderColor = '#FF3B5C';
+      btn.style.color = '#FF3B5C';
+      lbl.textContent = '⏹ Stop Recording';
+      status.textContent = '🔴 Recording — talk naturally...';
+    };
+
+    mediaRecorder.onstop = async () => {
+      isRecording = false;
+      stream.getTracks().forEach(t => t.stop());
+      btn.style.borderColor = '#2A2A3E';
+      btn.style.color = '#00E5FF';
+      lbl.textContent = 'Record Voice Sample';
+      status.textContent = '⏳ Uploading to ElevenLabs...';
+
+      const blob = new Blob(recordingChunks, { type: mediaRecorder.mimeType });
+      if (blob.size < 10000) { status.textContent = '⚠️ Too short — record at least 15 seconds.'; return; }
+
+      try {
+        const form = new FormData();
+        form.append('audio', blob, 'sample.webm');
+        const r = await fetch('/api/voice-sample', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + TOKEN },
+          body: form,
+        });
+        const d = await r.json();
+        if (r.ok) {
+          status.textContent = '✅ Voice sample added — clone is getting sharper!';
+        } else {
+          status.textContent = '❌ ' + (d.error || 'Upload failed');
+        }
+      } catch { status.textContent = '❌ Connection error — try again.'; }
+    };
+
+    mediaRecorder.start();
+  } catch (err) {
+    status.textContent = '❌ Mic access denied — allow microphone in browser settings.';
+  }
 }
 
 // ── ElevenLabs voice output ────────────────────────────────────────────────
