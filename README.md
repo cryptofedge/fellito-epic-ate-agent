@@ -1,121 +1,117 @@
-# FELLITO — Epic ATE Go-Live Support Agent
+# FELLITO — AI Epic Go-Live Consultant
 
 **Powered by Eclat Universe**
 
-FELLITO is an AI-powered At-The-Elbow (ATE) Go-Live support consultant for Epic EHR implementations. He's only live during an active Go-Live event. Outside of one, the app sits in standby.
+FELLITO is a digital clone of Fellito R. Rodriguez — 13+ year Epic Credentialed Trainer, 250+ physicians trained, 300+ nurses, 20+ major health systems. Available 24/7 on your phone, sharp as Day 1.
+
+> Built for Epic ATE consultants. Not a chatbot. A colleague who's been on the floor.
+
+---
+
+## What FELLITO Does
+
+- **19 dedicated Epic module agents** — CPOE, MyChart, Willow (Pharmacy), Beaker (Lab), ASAP (ED), Stork (OB), Radiant, Beacon (Oncology), OpTime, ADT, Prelude, Cadence, Resolute (Rev Cycle), ClinDoc, In Basket, Haiku/Canto, HIM, Healthy Planet, Reporting
+- **Real-time RAG brain** — upload tip sheets, build docs, and orientation materials; FELLITO pulls the right context on the fly
+- **Relationship memory** — remembers your last Go-Live, what the unit was struggling with, and greets you like a colleague, not a stranger
+- **Voice input** — talk to FELLITO hands-free on the floor
+- **Camera with PHI detection** — take pictures of workflows; Claude Vision blocks anything with patient data before it's processed
+- **PWA** — installs on Android and iOS from Chrome, no app store needed
+- **Streaming responses** — answers come in real time, no waiting
 
 ---
 
 ## Stack
 
-- **Mobile**: React Native + Expo + TypeScript (matching cryptofedge conventions)
-- **AI**: Claude Sonnet 4.6 via Anthropic API (white-labeled as "Eclat Universe")
-- **Voice**: ElevenLabs — Fellito's voice clone (PTT-style responses)
-- **RAG**: Node.js backend with lightweight TF-IDF vector store for orientation doc ingestion
-- **Backend**: Express.js (keeps API keys server-side, never in the mobile bundle)
+- **Backend**: Node.js + Express.js (port 3001)
+- **AI**: Claude Sonnet 4.6 — white-labeled as Eclat Universe (never exposed as Claude in UI)
+- **Voice**: Web Speech API (mic input) + ElevenLabs voice clone
+- **RAG**: TF-IDF cosine similarity, in-memory + disk JSON vector store
+- **Auth**: JWT (30-day for named users, device-locked temp links for guests)
+- **Memory**: Per-user Go-Live session journals, relationship context, struggle tracking
+- **PHI Gate**: Claude Vision scans camera uploads; system prompt hard-blocks PHI in chat
+- **Email**: nodemailer + Gmail SMTP for team invites
+- **Tunnel**: Serveo.net SSH tunnel with auto-restart watchdog
 
 ---
 
-## App Structure
+## Module Agents
 
-| Screen | Purpose |
-|---|---|
-| Onboarding | Consultant profile + Go-Live event + module assignment |
-| Standby | Dormant state, upcoming schedule, orientation doc upload |
-| Go-Live Active | Voice + text chat with Fellito, organized by Epic module tabs |
-| Orientation Upload | Drag/drop PDF ingestion with PHI warn-and-confirm guard |
-| Escalation | One-tap Tier 2/3/4 escalation with auto-generated issue summary |
-| Session Log | Searchable history of all Go-Live Q&A for post-event debrief |
-
----
-
-## Knowledge Base
-
-Module-specific Go-Live knowledge lives in `src/data/knowledge/`:
-
-- `patient-access.md` — Prelude, Grand Central, Cadence, Welcome
-- `clinical-core.md` — EpicCare Ambulatory/Inpatient, ASAP (ED), ClinDoc, Haiku/Canto/Rover
-- `periop-specialty.md` — OpTime, Anesthesia, Stork (OB), Bones, Beacon, Cupid, Kaleidoscope, Wisdom
-- `ancillary.md` — Beaker, Radiant, Willow, Bugsy
-- `revenue-cycle.md` — Resolute HB/PB, Tapestry
-- `interop-data.md` — Bridges, Care Everywhere, Clarity/Caboodle/Cogito
-- `patient-facing.md` — MyChart, Healthy Planet, Cheers
+| Agent | Epic Module |
+|-------|------------|
+| ClinDoc | Clinical Documentation |
+| CPOE | Order Entry |
+| ASAP | Emergency Department |
+| Beacon | Oncology |
+| Beaker | Lab / LIS |
+| ADT | Admissions / Discharge / Transfers |
+| OpTime | Surgical / Periop |
+| Prelude | Patient Registration |
+| Cadence | Scheduling / Ambulatory |
+| Radiant | Radiology |
+| MyChart | Patient Portal |
+| Willow | Pharmacy / BCMA |
+| Stork | OB / Labor & Delivery |
+| Resolute | Revenue Cycle / Billing |
+| In Basket | Messaging / Routing |
+| Haiku/Canto | Mobile Apps |
+| Reporting | Analytics / SlicerDicer |
+| HIM | Health Information Management |
+| Healthy Planet | Population Health |
 
 ---
 
 ## PHI Guardrail
 
-FELLITO never touches patient data. The app enforces:
+FELLITO **never touches patient data.**
 
-1. **Client-side PHI scan** on all chat input and uploaded filenames before sending
-2. **Warn-and-confirm modal** (not a hard block) — consultant must explicitly confirm before proceeding
-3. **Audit log** of every warning shown + whether the user confirmed (stored in app state)
-4. **System prompt hard rule** — Fellito will refuse to engage with PHI regardless of how a request is phrased
+- Camera uploads are scanned by Claude Vision before processing — PHI blocks the upload entirely
+- System prompt hard rule: FELLITO refuses to engage with any patient information regardless of how it's phrased
+- App handles only: workflow documentation, tip sheets, build docs, orientation materials
+
+FELLITO never sees: patient names, MRNs, DOBs, SSNs, clinical records, or any PHI in any form.
 
 ---
 
 ## Setup
 
-### 1. Environment
-
 ```bash
+# 1. Clone and install
+git clone https://github.com/cryptofedge/fellito-epic-ate-agent.git
+cd fellito-epic-ate-agent/backend
+npm install
+
+# 2. Configure environment
 cp .env.example .env
-# Fill in:
-# ANTHROPIC_API_KEY
-# ELEVENLABS_API_KEY  (fresh key — never reuse from other projects)
-# ELEVENLABS_VOICE_ID  (Fellito's voice clone ID from ElevenLabs)
-# BACKEND_URL  (default: http://localhost:3001)
+# Fill in: ANTHROPIC_API_KEY, ELEVENLABS_API_KEY, GMAIL_USER, GMAIL_APP_PASSWORD,
+#          OWNER_EMAIL, OWNER_PASSWORD, JWT_SECRET, BASE_URL
+
+# 3. Start (server + tunnel)
+cd ..
+bash start.sh
 ```
-
-### 2. Mobile app
-
-```bash
-npm install
-npm start
-```
-
-### 3. Backend
-
-```bash
-cd backend
-npm install
-npm start
-```
-
-### 4. ElevenLabs voice setup
-
-1. Clone your voice in ElevenLabs
-2. Copy the Voice ID into `.env` as `ELEVENLABS_VOICE_ID`
-3. Create a **new** ElevenLabs API key for this project — do not reuse keys from FEDGE 2.O or other projects
 
 ---
 
-## Escalation Tiers
+## Access
 
-| Tier | Who | When |
-|---|---|---|
-| 0 | Self-service (tip sheets) | User just needs the how-to |
-| 1 | ATE / Super User (Fellito's lane) | Training gap, floor-level fix |
-| 2 | Command Center Analyst | Config issue, role access, system error |
-| 3/4 | Vendor / Epic Backend | Interface failure, hosting issue, certified build |
+- **App (permanent):** `/app` — email + password, 30-day session
+- **App (guest):** `/temp/:token` — device-locked, auto-expires
+- **Admin portal:** `/admin` — owner only
 
 ---
 
 ## Data Boundary
 
-FELLITO handles:
-- Department/module workflow documentation
-- Go-Live orientation materials and tip sheets
-- Build/configuration documentation (non-patient)
-
-FELLITO never sees:
-- Patient names, MRNs, DOBs, SSNs
-- Clinical records or charts
-- Any PHI in any form
+| FELLITO handles | FELLITO never sees |
+|---|---|
+| Workflow documentation | Patient names / MRNs |
+| Go-Live orientation materials | Clinical records or charts |
+| Tip sheets and build docs | Any PHI in any form |
+| Consultant questions about Epic workflows | SSNs, DOBs, insurance IDs |
 
 ---
 
-*Eclat Universe · FELLITO v1.0*
+*Built by Fellito R. Rodriguez · Eclat Universe · 2026*
 
 ---
 
@@ -129,25 +125,9 @@ FELLITO never sees:
 
 This project is part of the FEDGE 2.O ecosystem and is protected under full intellectual property rights reserved by Rafael Fellito Rodriguez and Eclat Universe.
 
-### License Details
-- **Type:** Proprietary - All Rights Reserved
+- **Type:** Proprietary — All Rights Reserved
 - **Owner:** Rafael Fellito Rodriguez and Eclat Universe
 - **Brand:** FEDGE 2.O
 - **Status:** Protected and Confidential
 
-### Key Rights
-- All intellectual property retained
-- Reproduction prohibited without permission
-- Distribution rights reserved
-- Derivative works not permitted
-- Commercial use requires authorization
-
-### Attribution
-When referencing this software, please include:
-- FEDGE 2.O
-- Rafael Fellito Rodriguez
-- Eclat Universe
-
-### Inquiries
-For licensing, partnerships, or usage permissions:
-**Email:** cryptofedge@gmail.com
+For licensing, partnerships, or usage permissions: **cryptofedge@gmail.com**
