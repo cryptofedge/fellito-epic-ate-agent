@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v6';
+const CACHE = 'fellito-v7';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -758,7 +758,7 @@ html,body{height:100%;height:100dvh;background:#050508;color:#fff;font-family:-a
 .chip-grid{display:flex;flex-wrap:wrap;gap:8px;}
 .chip{background:#12121A;border:1px solid #1E1E2E;border-radius:20px;padding:8px 14px;font-size:13px;color:#fff;cursor:pointer;transition:all .15s;}
 .chip:active,.chip.selected{background:#00E5FF;color:#000;border-color:#00E5FF;font-weight:700;}
-.welcome-footer{background:#12121A;border-top:1px solid #1E1E2E;padding:14px 20px;padding-bottom:max(96px,env(safe-area-inset-bottom));flex-shrink:0;z-index:10;}
+.welcome-footer{background:#12121A;border-top:1px solid #1E1E2E;padding:14px 20px 16px;flex-shrink:0;z-index:10;}
 .start-btn{width:100%;background:#00E5FF;color:#000;font-size:14px;font-weight:800;border:none;border-radius:14px;padding:14px;cursor:pointer;letter-spacing:.5px;transition:opacity .15s;}
 .start-btn:disabled{opacity:.4;cursor:not-allowed;}
 
@@ -776,7 +776,8 @@ html,body{height:100%;height:100dvh;background:#050508;color:#fff;font-family:-a
 .context-bar{background:#12121A;border-bottom:1px solid #1E1E2E;padding:6px 16px;display:flex;gap:8px;flex-shrink:0;}
 .ctx-chip{background:#0A0A0F;border:1px solid #1E1E2E;border-radius:12px;padding:4px 10px;font-size:11px;color:#8A8AA0;}
 .ctx-chip span{color:#00E5FF;font-weight:700;}
-.input-bar{background:#12121A;border-top:1px solid #1E1E2E;padding:10px 12px;padding-bottom:max(96px,env(safe-area-inset-bottom));display:flex;align-items:flex-end;gap:8px;flex-shrink:0;z-index:10;}
+.chat-footer{display:flex;flex-direction:column;flex-shrink:0;background:#12121A;}
+.input-bar{background:#12121A;border-top:1px solid #1E1E2E;padding:10px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0;z-index:10;}
 .input-wrap{flex:1;background:#0A0A0F;border:1px solid #1E1E2E;border-radius:22px;padding:10px 16px;}
 textarea{width:100%;background:transparent;border:none;outline:none;color:#fff;font-size:14px;resize:none;max-height:100px;font-family:inherit;line-height:1.4;}
 textarea::placeholder{color:#8A8AA0;}
@@ -794,6 +795,10 @@ textarea::placeholder{color:#8A8AA0;}
   .shell{padding:0;}
   .phone{max-width:100%;height:100dvh;border-radius:0;border:none;box-shadow:none;}
   .expired-overlay{border-radius:0;}
+  .welcome-footer{position:fixed;bottom:0;left:0;right:0;padding-bottom:max(env(safe-area-inset-bottom),16px);}
+  .welcome-body{padding-bottom:80px;}
+  .chat-footer{position:fixed;bottom:0;left:0;right:0;padding-bottom:max(env(safe-area-inset-bottom),16px);}
+  .messages{padding-bottom:20px;}
 }
 </style>
 </head>
@@ -896,6 +901,7 @@ textarea::placeholder{color:#8A8AA0;}
       <div class="ctx-chip">Dept: <span id="ctxDept">—</span></div>
     </div>
     <div class="messages" id="messages"></div>
+    <div class="chat-footer">
     <div style="padding:6px 12px 0;display:flex;gap:8px;">
       <button onclick="triggerDowntime()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#FFB800;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">⏳ Downtime</button>
     </div>
@@ -918,6 +924,7 @@ textarea::placeholder{color:#8A8AA0;}
         <svg id="micIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
       </button>
     </div>
+    </div><!-- /chat-footer -->
   </div>
 
   <!-- Expired overlay -->
