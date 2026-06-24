@@ -8,5 +8,45 @@
     "createdAt": 1782063512484,
     "active": true,
     "assignedGoLives": []
+  },
+  {
+    "id": "693c667b-5a44-4b5a-be17-297cfb3ae840",
+    "email": "Sebastienbel1@hotmail.com",
+    "name": "Shabazz",
+    "role": "contributor",
+    "passwordHash": "$2a$12$2TFoHHWPhqQkD.GUGpaxcuqMKHY5ExQKMMgkRwrYefpk4Q9wRe1EG",
+    "createdAt": 1782216777497,
+    "active": true,
+    "assignedGoLives": []
+  },
+  {
+    "id": "da5cb900-97d2-41be-99c9-9541ae6cb113",
+    "email": "Harlemtripleh@gmail.com",
+    "name": "Harold",
+    "role": "contributor",
+    "passwordHash": "$2a$12$UGlDxaKxx45jscyfLbkMTO74IANkoeCCwa/M3T1Imltqjnij7L0aS",
+    "createdAt": 1782222836309,
+    "active": true,
+    "assignedGoLives": []
+  },
+  {
+    "id": "6fcf1d23-f02d-4f3e-8800-606e2150be89",
+    "email": "thefiltah@gmail.com",
+    "name": "Ralph",
+    "role": "contributor",
+    "passwordHash": "$2a$12$4VdfNwg3KeHocdlw8QFHPuQlLKyG9dcE7TR.hS95tyiNGFJ1NXLPm",
+    "createdAt": 1782223165251,
+    "active": true,
+    "assignedGoLives": []
+  },
+  {
+    "id": "c453e16d-2fde-4d85-8ffb-43838cfcfa75",
+    "email": "Ahelene410@yahoo.com",
+    "name": "April",
+    "role": "contributor",
+    "passwordHash": "$2a$12$EO3N2L6PhqI.6UkLNV0xrOBOrL2iguQoeIyApsFO7dhSBmm2UFnSq",
+    "createdAt": 1782223632015,
+    "active": true,
+    "assignedGoLives": []
   }
 ]

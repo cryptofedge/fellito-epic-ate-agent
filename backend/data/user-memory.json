@@ -1,0 +1,590 @@
+{
+  "anon": {
+    "userId": "anon",
+    "firstSeen": 1782145168852,
+    "lastSeen": 1782230166606,
+    "messageCount": 84,
+    "modules": {
+      "CPOE": 50,
+      "Prelude/Cadence": 2,
+      "ClinDoc": 4,
+      "ASAP (ED)": 10,
+      "MyChart": 4,
+      "Beaker (Lab)": 14
+    },
+    "depts": {
+      "Emergency Department": 58,
+      "ED": 2,
+      "PACU": 2,
+      "OR/Surgical": 18,
+      "ICU": 2,
+      "Med/Surg": 2
+    },
+    "goLives": {
+      "Northwell Health — Epic Go-Live Demo": 74,
+      "Northwell Health": 6,
+      "Test": 2,
+      "Test Hospital": 2
+    },
+    "recentMessages": [
+      {
+        "role": "user",
+        "content": "notes",
+        "ts": 1782148934147,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "assistant",
+        "content": "What specifically about notes?\n\n- Writing a progress note?\n- Cosigning?\n- Adding an addendum?\n- SmartPhrases?\n\nTell me where you're stuck.",
+        "ts": 1782148934178,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "user",
+        "content": "progress note",
+        "ts": 1782148957509,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "assistant",
+        "content": "**Writing a Progress Note in the ED:**\n\n- Navigator → **Notes** tab → **New Note** → select note type (ED Provider Note, etc.)\n- Use **SmartPhrases** (dot phrases) to pull in vitals, meds, problem list fast — type a dot and the phrase name\n- **Sign** when done — if you're a resident, it routes automatically for attending cosign\n- If you need to fix it after signing — **Addendum**, not a new note\n\nWhere are you at in that workflow?",
+        "ts": 1782148957546,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "user",
+        "content": "smartphrase",
+        "ts": 1782149015856,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "assistant",
+        "content": "**SmartPhrases — quick hits:**\n\n- Type a **period + phrase name** directly in the note (e.g. `.hpi`, `.ros`, `.assessment`)\n- To **build your own** — Epic button → SmartPhrase Manager → New\n- To **pull someone else's** — search by author name and copy it to yours\n- **.AVS** pulls discharge instructions, **.MEDS** pulls current med list — huge time savers in the ED\n\nNeed to build one or find one someone else made?",
+        "ts": 1782149015868,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "user",
+        "content": "yes",
+        "ts": 1782149069886,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "assistant",
+        "content": "Which one?\n\n- **Build a new one** from scratch?\n- **Find one** another provider already made?",
+        "ts": 1782149069908,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "user",
+        "content": "yes",
+        "ts": 1782149081687,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "assistant",
+        "content": "Which one?\n\n- **Build a new one** from scratch?\n- **Find one** another provider already made?",
+        "ts": 1782149081709,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "user",
+        "content": "always give numbers for options",
+        "ts": 1782149107177,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "assistant",
+        "content": "Which one?\n\n1. Build a new one from scratch?\n2. Find one another provider already made?",
+        "ts": 1782149107217,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "user",
+        "content": "put in in your memory and 1",
+        "ts": 1782149133422,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "assistant",
+        "content": "Got it — numbering options every time, locked in.\n\n**Building a new SmartPhrase:**\n\n1. Epic button → **SmartPhrase Manager**\n2. Click **New** → give it a name (no spaces, starts with your initials ideally)\n3. Type your template text — use **[brackets]** for fill-in fields, **{wildcards}** for auto-pulled data\n4. **Accept** → it's live immediately in any note\n\nWant to add wildcards to pull in patient data automatically?",
+        "ts": 1782149133474,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "user",
+        "content": "yes",
+        "ts": 1782149171908,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "assistant",
+        "content": "**Common Wildcards to drop in your SmartPhrase:**\n\n1. `***` — cursor stops here when you tab through\n2. `@NAME@` — pulls patient name\n3. `@DOB@` — pulls date of birth\n4. `@AGE@` — pulls patient age\n5. `@MEDS@` — pulls current med list\n6. `@PROBLEMS@` — pulls problem list\n7. `@VITALS@` — pulls most recent vitals\n\nDrop these directly in your phrase text where you want data to auto-populate.\n\nWant to test it in a note or add a fill-in field next?",
+        "ts": 1782149171926,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "user",
+        "content": "yes",
+        "ts": 1782149190114,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "assistant",
+        "content": "Which one?\n\n1. Test it in a note?\n2. Add a fill-in field?",
+        "ts": 1782149190141,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "user",
+        "content": "2",
+        "ts": 1782149204682,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "assistant",
+        "content": "**Adding Fill-In Fields to your SmartPhrase:**\n\n1. In SmartPhrase Manager, place your cursor where you want the field\n2. Click **Insert Fill-In** or type `{` — opens the field builder\n3. Give the field a **label** (e.g. `{Chief Complaint}`)\n4. Choose field type:\n   - **Free text** — user types anything\n   - **Multiple choice** — user picks from a list you build\n5. When you use the phrase in a note — Epic prompts you to fill each field before inserting\n\nWant to add multiple choice options to a field or test the whole phrase now?",
+        "ts": 1782149204739,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "user",
+        "content": "teach me now hoe to put in an ordewr",
+        "ts": 1782149255427,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "assistant",
+        "content": "**Placing an Order in Epic CPOE — ED:**\n\n1. Open patient chart → click **Orders** tab\n2. Click **+ New Order** or use the search bar at the top\n3. Type what you need — med, lab, imaging, consult — hit Enter\n4. Select the correct order from the list → fill in details (dose, route, frequency)\n5. Click **Sign** — order routes immediately\n\nWant me to walk you through a specific order type — med, lab, imaging, or consult?",
+        "ts": 1782149255483,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "user",
+        "content": "yea, gun shot wond in ed",
+        "ts": 1782149290599,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "assistant",
+        "content": "Which order type you want first?\n\n1. Medications\n2. Labs\n3. Imaging\n4. Consult",
+        "ts": 1782149290627,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "user",
+        "content": "1",
+        "ts": 1782149301592,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "assistant",
+        "content": "**Medication Orders — GSW in the ED:**\n\n1. Orders tab → search the med (e.g. **Morphine**, **TXA**, **Ancef**)\n2. Select correct formulation → verify **dose, route, frequency**\n3. Add **indication** if prompted — links to diagnosis\n4. Check **allergies banner** before signing — Epic will alert you\n5. Click **Sign** — routes to pharmacy instantly\n\nWant me to walk through a specific med, or move to labs next?",
+        "ts": 1782149301625,
+        "module": "CPOE",
+        "dept": "Emergency Department"
+      },
+      {
+        "role": "user",
+        "content": "What are the top 2 CPOE issues on go-live day? One sentence each.",
+        "ts": 1782218325712,
+        "module": "CPOE",
+        "dept": "ICU"
+      },
+      {
+        "role": "assistant",
+        "content": "1. **Providers can't find orders** — they're searching wrong terms; teach them to search broad (e.g. \"saline\" not \"0.9% sodium chloride\").\n2. **Wrong formulary loading** — orders flagging or not appearing because the encounter type or department isn't mapped right; escalate to build team immediately, don't try to fix it yourself.",
+        "ts": 1782218325736,
+        "module": "CPOE",
+        "dept": "ICU"
+      },
+      {
+        "role": "user",
+        "content": "how do I handle a provider who cant find their order sets in CPOE",
+        "ts": 1782230166571,
+        "module": "CPOE",
+        "dept": "Med/Surg"
+      },
+      {
+        "role": "assistant",
+        "content": "Yo — straight up, this is **Day 1 money** right here. Three moves:\n\n1. **Ask what they're searching** — 90% of the time they're typing the full clinical name (\"Acute Coronary Syndrome Workup\") when the build team named it short (\"ACS Order Set\"). Have them reload their preference list or search broad terms first.\n\n2. **Check their role/department assignment** — order sets are locked to specific",
+        "ts": 1782230166606,
+        "module": "CPOE",
+        "dept": "Med/Surg"
+      }
+    ],
+    "insights": [
+      "Uses order sets frequently in CPOE",
+      "Documentation workflows are a focus area in CPOE",
+      "Documentation workflows are a focus area in Beaker (Lab)"
+    ],
+    "struggledWith": [
+      {
+        "topic": "introduce yourself. tell me specifically what you know about the cpoe module at northwell health — epic go-live demo in ",
+        "count": 5,
+        "lastAsked": 1782145788524
+      },
+      {
+        "topic": "patient just got here",
+        "count": 2,
+        "lastAsked": 1782148078060
+      },
+      {
+        "topic": "help me get patient signed up to mychart",
+        "count": 2,
+        "lastAsked": 1782148494937
+      },
+      {
+        "topic": "dont repeat yourself",
+        "count": 2,
+        "lastAsked": 1782148709842
+      },
+      {
+        "topic": "stop reapting",
+        "count": 2,
+        "lastAsked": 1782148741638
+      },
+      {
+        "topic": "notes",
+        "count": 2,
+        "lastAsked": 1782148934148
+      },
+      {
+        "topic": "and put that in your memory",
+        "count": 2,
+        "lastAsked": 1782149133422
+      },
+      {
+        "topic": "introduce yourself and orient me for my shift.",
+        "count": 1,
+        "lastAsked": 1782145168852
+      },
+      {
+        "topic": "introduce yourself. tell me about cpoe at northwell health in the emergency department. top 3 common workflow issues.",
+        "count": 1,
+        "lastAsked": 1782145445114
+      },
+      {
+        "topic": "say hello briefly",
+        "count": 1,
+        "lastAsked": 1782145574825
+      },
+      {
+        "topic": "say hi",
+        "count": 1,
+        "lastAsked": 1782145628834
+      },
+      {
+        "topic": "quick intro: you are supporting cpoe at northwell health — epic go-live demo, emergency department. in 3 bullets: what a",
+        "count": 1,
+        "lastAsked": 1782145847220
+      },
+      {
+        "topic": "front desk needs to scan insurance",
+        "count": 1,
+        "lastAsked": 1782147352063
+      },
+      {
+        "topic": "add numbers to the options",
+        "count": 1,
+        "lastAsked": 1782147974605
+      },
+      {
+        "topic": "2",
+        "count": 1,
+        "lastAsked": 1782148105267
+      },
+      {
+        "topic": "make it simple for user not to have to read all of that",
+        "count": 1,
+        "lastAsked": 1782148140049
+      },
+      {
+        "topic": "can you add screen shots without adding the epic logo ?",
+        "count": 1,
+        "lastAsked": 1782148188165
+      },
+      {
+        "topic": "make your answers shorter",
+        "count": 1,
+        "lastAsked": 1782148670638
+      },
+      {
+        "topic": "still doing it",
+        "count": 1,
+        "lastAsked": 1782148752467
+      },
+      {
+        "topic": "progress note",
+        "count": 1,
+        "lastAsked": 1782148957509
+      }
+    ],
+    "name": "Fellito Rodriguez",
+    "currentSession": {
+      "startedAt": 1782230166572,
+      "module": "CPOE",
+      "dept": "Med/Surg",
+      "goLive": "Test Hospital",
+      "issueCount": 1,
+      "topIssues": [
+        "how do I handle a provider who cant find their order sets in CPOE"
+      ],
+      "messageCount": 2
+    }
+  },
+  "0c8dfd2d-665d-42df-8df2-b0f58f119f8c": {
+    "userId": "0c8dfd2d-665d-42df-8df2-b0f58f119f8c",
+    "firstSeen": 1782221083248,
+    "lastSeen": 1782221083367,
+    "messageCount": 2,
+    "modules": {
+      "CPOE": 2
+    },
+    "depts": {
+      "OR/Surgical": 2
+    },
+    "goLives": {
+      "Northwell Health — Epic Go-Live Demo": 2
+    },
+    "recentMessages": [
+      {
+        "role": "user",
+        "content": "tell me how to do a note",
+        "ts": 1782221083248,
+        "module": "CPOE",
+        "dept": "OR/Surgical"
+      },
+      {
+        "role": "assistant",
+        "content": "**Progress Note — Quick Hits**\n\n- **Navigator:** Click the **Notes** tab in the patient chart → **New Note** → select note type (Progress Note, Op Note, etc.)\n- **SmartPhrases:** Type a period + phrase name (e.g. `.HPE`) to auto-populate your template — saves time straight up\n- **SmartText/SmartList:** Brackets `[ ]` = click-through fields, pull forward vitals, meds, problem list automatically\n- **Sign vs. Pend:** Hit **Sign** when done — **Pend** saves a draft, but it is NOT in the chart until signed\n- **Cosign:** If a resident or APP wrote the note, the attending gets a **In Basket message** to cosign — make sure they know to check In Basket\n\n---\n\n**Common Day 1 Problem:**\nProviders typing free text everything instead of using SmartPhrases — slow them down for 2 minutes, show them one phrase, they will thank you later.\n\nWhat else you need?",
+        "ts": 1782221083367,
+        "module": "CPOE",
+        "dept": "OR/Surgical"
+      }
+    ],
+    "insights": [
+      "Documentation workflows are a focus area in CPOE"
+    ],
+    "struggledWith": [
+      {
+        "topic": "tell me how to do a note",
+        "count": 1,
+        "lastAsked": 1782221083248
+      }
+    ]
+  },
+  "54184c55-dab9-460c-a9f4-70ca946237b1": {
+    "userId": "54184c55-dab9-460c-a9f4-70ca946237b1",
+    "name": "Fellito Rodriguez",
+    "firstSeen": 1782230253842,
+    "lastSeen": 1782273928910,
+    "messageCount": 12,
+    "modules": {
+      "CPOE": 12
+    },
+    "depts": {
+      "Med/Surg": 6,
+      "ICU": 4
+    },
+    "goLives": {
+      "Northwell Health Go-Live": 6,
+      "Test": 2
+    },
+    "recentMessages": [
+      {
+        "role": "user",
+        "content": "providers cant find order sets in CPOE on Med Surg unit",
+        "ts": 1782230253842,
+        "module": "CPOE",
+        "dept": "Med/Surg"
+      },
+      {
+        "role": "assistant",
+        "content": "Real talk — this is the #1 Day 1 complaint. Here's the move:\n\n**First — confirm the ROOT CAUSE:**\n- Are they looking in the wrong **context**? (Inpatient vs Outpatient, wrong patient type)\n- Is the order set **not mapped** to their role/department in build?\n- Are they spelling",
+        "ts": 1782230253859,
+        "module": "CPOE",
+        "dept": "Med/Surg"
+      },
+      {
+        "role": "user",
+        "content": "cosign queue is backing up � 15 unsigned orders",
+        "ts": 1782230259973,
+        "module": "CPOE",
+        "dept": "Med/Surg"
+      },
+      {
+        "role": "assistant",
+        "content": "Aight Fellito, real talk — cosign queue backup on Day 1 is normal but it gets ugly fast. Here's the immediate move:\n\n**RIGHT NOW:**\n- **Find the attending/supervisor.** Ask straight up: \"Which 5 orders are clinical priority — meds, labs, critical stuff?\" Cosign those first. The rest can wait",
+        "ts": 1782230259994,
+        "module": "CPOE",
+        "dept": "Med/Surg"
+      },
+      {
+        "role": "user",
+        "content": "how do I handle a provider who keeps skipping medication reconciliation",
+        "ts": 1782230261736,
+        "module": "CPOE",
+        "dept": "Med/Surg"
+      },
+      {
+        "role": "assistant",
+        "content": "Yo Fellito — good question. Med recon skips are a **serious** floor problem that blows up fast. Here's the move:\n\n**Immediate (Right Now):**\n- Pull the provider aside — not in front of staff. Ask *why* they're skipping. Could be they don't know where it is, think it's \"just paperwork",
+        "ts": 1782230261777,
+        "module": "CPOE",
+        "dept": "Med/Surg"
+      },
+      {
+        "role": "user",
+        "content": "quick test",
+        "ts": 1782260143961,
+        "module": "CPOE",
+        "dept": "ICU"
+      },
+      {
+        "role": "assistant",
+        "content": "Yo Fellito — I'm live and sharp. \n\nWhat's happening on the floor right now? Med/Surg still,",
+        "ts": 1782260143975,
+        "module": "CPOE",
+        "dept": "ICU"
+      },
+      {
+        "role": "user",
+        "content": "test",
+        "ts": 1782262914327,
+        "module": "CPOE",
+        "dept": "ICU"
+      },
+      {
+        "role": "assistant",
+        "content": "Yo Fellito — I'm live and sharp.\n\nWhat's happening on the floor right",
+        "ts": 1782262914351,
+        "module": "CPOE",
+        "dept": "ICU"
+      },
+      {
+        "role": "user",
+        "content": "Quick test - what is CPOE?",
+        "ts": 1782273928893,
+        "module": "CPOE"
+      },
+      {
+        "role": "assistant",
+        "content": "Yo Fellito — you already know this, but I'll keep it sharp:\n\n- **CPOE** = Computerized Provider Order Entry — providers place orders directly in Epic instead of handwriting or verbally routing everything\n- Covers meds, labs, imaging, consults, diets, activity, nursing orders — all of it\n- Eliminates transcription errors, routes orders to the right department automatically\n- In Epic, it lives primarily in the **",
+        "ts": 1782273928910,
+        "module": "CPOE"
+      }
+    ],
+    "insights": [
+      "Needs help with cosign workflows in CPOE",
+      "Uses order sets frequently in CPOE"
+    ],
+    "struggledWith": [
+      {
+        "topic": "providers cant find order sets in cpoe on med surg unit",
+        "count": 1,
+        "lastAsked": 1782230253842
+      },
+      {
+        "topic": "cosign queue is backing up � 15 unsigned orders",
+        "count": 1,
+        "lastAsked": 1782230259974
+      },
+      {
+        "topic": "how do i handle a provider who keeps skipping medication reconciliation",
+        "count": 1,
+        "lastAsked": 1782230261736
+      },
+      {
+        "topic": "quick test",
+        "count": 1,
+        "lastAsked": 1782260143961
+      },
+      {
+        "topic": "test",
+        "count": 1,
+        "lastAsked": 1782262914328
+      },
+      {
+        "topic": "quick test - what is cpoe?",
+        "count": 1,
+        "lastAsked": 1782273928894
+      }
+    ],
+    "journals": [
+      {
+        "startedAt": 1782262914328,
+        "module": "CPOE",
+        "dept": "ICU",
+        "goLive": null,
+        "issueCount": 0,
+        "topIssues": [],
+        "messageCount": 2,
+        "endedAt": 1782263370204,
+        "durationMin": 8
+      },
+      {
+        "startedAt": 1782260143961,
+        "module": "CPOE",
+        "dept": "ICU",
+        "goLive": "Test",
+        "issueCount": 0,
+        "topIssues": [],
+        "messageCount": 2,
+        "endedAt": 1782260144298,
+        "durationMin": 0
+      },
+      {
+        "startedAt": 1782230253842,
+        "module": "CPOE",
+        "dept": "Med/Surg",
+        "goLive": "Northwell Health Go-Live",
+        "issueCount": 3,
+        "topIssues": [
+          "providers cant find order sets in CPOE on Med Surg unit",
+          "cosign queue is backing up � 15 unsigned orders",
+          "how do I handle a provider who keeps skipping medication reconciliation"
+        ],
+        "messageCount": 6,
+        "endedAt": 1782230263993,
+        "durationMin": 0
+      }
+    ],
+    "currentSession": {
+      "startedAt": 1782273928894,
+      "module": "CPOE",
+      "dept": null,
+      "goLive": null,
+      "issueCount": 1,
+      "topIssues": [
+        "Quick test - what is CPOE?"
+      ],
+      "messageCount": 2
+    }
+  }
+}

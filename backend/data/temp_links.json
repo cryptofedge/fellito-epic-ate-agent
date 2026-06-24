@@ -1,0 +1,32 @@
+[
+  {
+    "id": "7ee43ec2-cfd3-4e95-9b8b-56f9a324fb5f",
+    "token": "873b78c597f2ef3390f03b0e95238ffc00920c5769067285",
+    "label": "audit",
+    "goLiveId": null,
+    "assignedModules": [],
+    "status": "active",
+    "createdAt": 1782260144127,
+    "linkExpiresAt": 1782260744127,
+    "openedAt": 1782260144225,
+    "sessionExpiresAt": 1782260744225,
+    "revokedAt": null,
+    "boundIp": "::1",
+    "browserToken": "4fe82074e097aabfd30e9fd163c1b6d8"
+  },
+  {
+    "id": "cc4faa8a-6184-4144-8caa-b168e049a978",
+    "token": "d9bf4459ef211198bce4a72f585670b14b8820adf822a99a",
+    "label": "test",
+    "goLiveId": null,
+    "assignedModules": [],
+    "status": "active",
+    "createdAt": 1782262910302,
+    "linkExpiresAt": 1782263510302,
+    "openedAt": 1782262911437,
+    "sessionExpiresAt": 1782263511437,
+    "revokedAt": null,
+    "boundIp": "156.146.43.210",
+    "browserToken": "75362f324904502ca7b637abafeae753"
+  }
+]
