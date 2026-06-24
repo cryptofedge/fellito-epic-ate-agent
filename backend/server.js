@@ -709,7 +709,7 @@ function buildChatPage(link, jwtToken, msLeft) {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>FELLITO</title>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" href="/public/favicon.png">
@@ -721,10 +721,10 @@ function buildChatPage(link, jwtToken, msLeft) {
 <link rel="apple-touch-icon" href="/public/icon-192.png">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{height:100%;background:#050508;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow:hidden;}
+html,body{height:100%;height:100dvh;background:#050508;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow:hidden;}
 
-.shell{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#050508;padding:20px;}
-.phone{width:100%;max-width:390px;height:min(844px,calc(100vh - 40px));background:#0A0A0F;border-radius:44px;overflow:hidden;display:flex;flex-direction:column;border:1px solid #1E1E2E;box-shadow:0 40px 120px rgba(0,229,255,0.08);position:relative;}
+.shell{display:flex;align-items:center;justify-content:center;min-height:100dvh;background:#050508;padding:20px;}
+.phone{width:100%;max-width:390px;height:min(844px,calc(100dvh - 40px));background:#0A0A0F;border-radius:44px;overflow:hidden;display:flex;flex-direction:column;border:1px solid #1E1E2E;box-shadow:0 40px 120px rgba(0,229,255,0.08);position:relative;}
 
 /* status bar */
 .status-bar{background:#0A0A0F;padding:12px 24px 6px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
@@ -755,8 +755,8 @@ html,body{height:100%;background:#050508;color:#fff;font-family:-apple-system,Bl
 .chip-grid{display:flex;flex-wrap:wrap;gap:8px;}
 .chip{background:#12121A;border:1px solid #1E1E2E;border-radius:20px;padding:8px 14px;font-size:13px;color:#fff;cursor:pointer;transition:all .15s;}
 .chip:active,.chip.selected{background:#00E5FF;color:#000;border-color:#00E5FF;font-weight:700;}
-.welcome-footer{background:#12121A;border-top:1px solid #1E1E2E;padding:14px 20px;flex-shrink:0;padding-bottom:max(14px,env(safe-area-inset-bottom));}
-.start-btn{width:100%;background:#00E5FF;color:#000;font-size:15px;font-weight:800;border:none;border-radius:14px;padding:14px;cursor:pointer;letter-spacing:1px;transition:opacity .15s;}
+.welcome-footer{background:#12121A;border-top:1px solid #1E1E2E;padding:14px 20px;padding-bottom:max(70px,env(safe-area-inset-bottom));flex-shrink:0;position:sticky;bottom:0;z-index:10;}
+.start-btn{width:100%;background:#00E5FF;color:#000;font-size:14px;font-weight:800;border:none;border-radius:14px;padding:14px;cursor:pointer;letter-spacing:.5px;transition:opacity .15s;}
 .start-btn:disabled{opacity:.4;cursor:not-allowed;}
 
 /* chat screen */
@@ -773,7 +773,7 @@ html,body{height:100%;background:#050508;color:#fff;font-family:-apple-system,Bl
 .context-bar{background:#12121A;border-bottom:1px solid #1E1E2E;padding:6px 16px;display:flex;gap:8px;flex-shrink:0;}
 .ctx-chip{background:#0A0A0F;border:1px solid #1E1E2E;border-radius:12px;padding:4px 10px;font-size:11px;color:#8A8AA0;}
 .ctx-chip span{color:#00E5FF;font-weight:700;}
-.input-bar{background:#12121A;border-top:1px solid #1E1E2E;padding:10px 12px;display:flex;align-items:flex-end;gap:8px;flex-shrink:0;padding-bottom:max(10px,env(safe-area-inset-bottom));}
+.input-bar{background:#12121A;border-top:1px solid #1E1E2E;padding:10px 12px;padding-bottom:max(70px,env(safe-area-inset-bottom));display:flex;align-items:flex-end;gap:8px;flex-shrink:0;position:sticky;bottom:0;z-index:10;}
 .input-wrap{flex:1;background:#0A0A0F;border:1px solid #1E1E2E;border-radius:22px;padding:10px 16px;}
 textarea{width:100%;background:transparent;border:none;outline:none;color:#fff;font-size:14px;resize:none;max-height:100px;font-family:inherit;line-height:1.4;}
 textarea::placeholder{color:#8A8AA0;}
@@ -787,9 +787,9 @@ textarea::placeholder{color:#8A8AA0;}
 .expired-overlay{display:none;position:absolute;inset:0;background:rgba(10,10,15,.97);border-radius:44px;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:32px;text-align:center;z-index:100;}
 .expired-overlay.show{display:flex;}
 
-@media(max-width:430px){
-  .shell{padding:0;background:#0A0A0F;}
-  .phone{max-width:100%;height:100vh;border-radius:0;border:none;}
+@media(max-width:480px){
+  .shell{padding:0;}
+  .phone{max-width:100%;height:100dvh;border-radius:0;border:none;box-shadow:none;}
   .expired-overlay{border-radius:0;}
 }
 </style>
@@ -878,9 +878,10 @@ textarea::placeholder{color:#8A8AA0;}
         <div class="section-title">SELECT YOUR DEPARTMENT</div>
         <div class="chip-grid" id="deptChips"></div>
       </div>
+
     </div>
     <div class="welcome-footer">
-      <button class="start-btn" id="startBtn" disabled onclick="startChat()">Select module & department to continue</button>
+      <button class="start-btn" id="startBtn" disabled onclick="startChat()">Select Go-Live + Module + Dept</button>
     </div>
   </div>
 
@@ -1101,12 +1102,29 @@ function checkReady() {
   const btn = document.getElementById('startBtn');
   if (selectedGoLive && selectedModule && selectedDept) {
     btn.disabled = false;
-    btn.textContent = 'Start Session with Fellito →';
+    btn.textContent = 'Start Session →';
   } else {
     btn.disabled = true;
-    btn.textContent = 'Select Go-Live, module & department';
+    btn.textContent = 'Select Go-Live + Module + Dept';
   }
+  setTimeout(() => btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 150);
 }
+
+// Pin button above Android nav bar using visualViewport
+(function fixMobileLayout() {
+  if (window.innerWidth > 768) return;
+  const btn = document.getElementById('startBtn');
+  const inputBar = document.querySelector('.input-bar');
+  function applyFix() {
+    const navBarH = window.innerHeight - (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+    const offset = Math.max(navBarH + 8, 60);
+    if (btn) { btn.style.marginBottom = offset + 'px'; }
+    if (inputBar) { inputBar.style.paddingBottom = offset + 'px'; }
+  }
+  applyFix();
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', applyFix);
+  window.addEventListener('resize', applyFix);
+}());
 
 // ── Module intro briefs (instant, no API call) ─────────────────────────────
 const MODULE_BRIEFS = {
@@ -1609,7 +1627,7 @@ app.get('/app', (_req, res) => {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>FELLITO</title>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" href="/public/favicon.png">
