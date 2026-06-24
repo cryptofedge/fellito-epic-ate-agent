@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v14';
+const CACHE = 'fellito-v15';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -819,10 +819,10 @@ textarea::placeholder{color:#8A8AA0;}
   .expired-overlay{border-radius:0;}
   .status-bar{display:none;}
   /* Stay in flex — do NOT use position:fixed (Samsung overflow:hidden clips fixed children) */
-  .welcome-footer{position:static;padding:14px 20px 16px;}
-  .welcome-body{flex:1;overflow-y:auto;}
-  .chat-footer{position:static;}
-  .messages{flex:1;overflow-y:auto;padding-bottom:8px;}
+  .welcome-footer{position:static;padding:14px 20px 16px;flex-shrink:0;}
+  .welcome-body{flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;}
+  .chat-footer{position:static;flex-shrink:0;}
+  .messages{flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;padding-bottom:8px;}
 }
 </style>
 </head>
@@ -1216,7 +1216,7 @@ function startChat() {
 // ── Downtime ────────────────────────────────────────────────────────────────
 function triggerDowntime() {
   var msg = 'It is slow on the floor right now. Give me specific things I can do right now to look productive, add value, and stay sharp during this downtime — things that will actually help me and the team.';
-  document.getElementById('userInput').value = msg;
+  document.getElementById('input').value = msg;
   sendMessage();
 }
 
