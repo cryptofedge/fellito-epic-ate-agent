@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v16';
+const CACHE = 'fellito-v17';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -872,6 +872,7 @@ textarea::placeholder{color:#8A8AA0;}
       <div class="header-sub" id="headerSub">${name} · Epic ATE Support</div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
+      <button onclick="toggleSettings()" title="Settings" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:50%;width:30px;height:30px;color:#8A8AA0;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">⚙️</button>
       <button onclick="openNearby()" title="What's nearby?" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:20px;color:#00E5FF;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:5px;">
         📍 Nearby
       </button>
@@ -919,17 +920,6 @@ textarea::placeholder{color:#8A8AA0;}
           <li>Any PHI in any form</li>
         </ul>
         <div style="font-size:11px;color:#FF3B5C;font-weight:800;letter-spacing:1px;">ANY SUCH INFORMATION WILL BE IMMEDIATELY REJECTED.</div>
-      </div>
-
-      <div>
-        <div class="section-title">VOICE CLONE</div>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <button id="recordVoiceBtn" onclick="toggleVoiceRecord()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:20px;color:#00E5FF;font-size:12px;font-weight:700;padding:8px 16px;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:6px;">
-            🎙️ <span id="recordVoiceLbl">Record Voice Sample</span>
-          </button>
-          <div id="recordVoiceStatus" style="font-size:11px;color:#8A8AA0;"></div>
-        </div>
-        <div style="font-size:11px;color:#555;margin-top:6px;">Tap record, talk naturally for 30–60 sec, tap stop — your clone gets sharper every time.</div>
       </div>
 
       <div>
@@ -990,6 +980,21 @@ textarea::placeholder{color:#8A8AA0;}
       </button>
     </div>
     </div><!-- /chat-footer -->
+  </div>
+
+  <!-- Settings panel — voice clone recording -->
+  <div id="settingsPanel" style="display:none;position:absolute;inset:0;background:rgba(5,5,8,.97);z-index:200;flex-direction:column;padding:24px 20px;gap:16px;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="font-size:16px;font-weight:900;color:#00E5FF;letter-spacing:1px;">SETTINGS</div>
+      <button onclick="toggleSettings()" style="background:none;border:none;color:#8A8AA0;font-size:22px;cursor:pointer;">✕</button>
+    </div>
+    <div style="font-size:11px;color:#8A8AA0;font-weight:700;letter-spacing:2px;margin-bottom:4px;">VOICE CLONE</div>
+    <div style="font-size:13px;color:#ccc;line-height:1.6;margin-bottom:8px;">Record your voice and send it straight to ElevenLabs. The more samples you add, the more FELLITO sounds exactly like you.</div>
+    <button id="recordVoiceBtn" onclick="toggleVoiceRecord()" style="background:#1E1E2E;border:1px solid #00E5FF;border-radius:20px;color:#00E5FF;font-size:13px;font-weight:700;padding:12px 20px;cursor:pointer;display:flex;align-items:center;gap:8px;width:100%;justify-content:center;">
+      🎙️ <span id="recordVoiceLbl">Record Voice Sample</span>
+    </button>
+    <div id="recordVoiceStatus" style="font-size:12px;color:#8A8AA0;text-align:center;min-height:18px;"></div>
+    <div style="font-size:11px;color:#555;text-align:center;">Talk naturally for 30–60 sec — tap Stop when done</div>
   </div>
 
   <!-- Expired overlay -->
@@ -1376,6 +1381,12 @@ async function handleCamera(input) {
 
   cameraBtn.style.color = '#8A8AA0';
   cameraBtn.style.pointerEvents = 'auto';
+}
+
+// ── Settings panel ────────────────────────────────────────────────────────
+function toggleSettings() {
+  const p = document.getElementById('settingsPanel');
+  p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
 }
 
 // ── Voice Clone Recording ──────────────────────────────────────────────────
