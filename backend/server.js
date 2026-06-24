@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v12';
+const CACHE = 'fellito-v13';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -947,8 +947,9 @@ textarea::placeholder{color:#8A8AA0;}
       <button id="micBtn" onclick="toggleMic()" title="Voice input" style="background:none;border:none;color:#8A8AA0;cursor:pointer;padding:0 6px;display:flex;align-items:center;flex-shrink:0;">
         <svg id="micIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
       </button>
-      <button id="voiceBtn" onclick="toggleVoice()" title="FELLITO voice OFF — tap to enable" style="background:none;border:none;color:#8A8AA0;cursor:pointer;padding:0 6px;display:flex;align-items:center;flex-shrink:0;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path id="voiceWave" d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="#8A8AA0"/></svg>
+      <button id="voiceBtn" onclick="toggleVoice()" title="FELLITO voice OFF — tap to enable" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:20px;color:#8A8AA0;cursor:pointer;padding:5px 10px;display:flex;align-items:center;gap:4px;flex-shrink:0;font-size:11px;font-weight:700;letter-spacing:.5px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path id="voiceWave" d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="#8A8AA0"/></svg>
+        <span id="voiceBtnLabel">VOICE</span>
       </button>
     </div>
     </div><!-- /chat-footer -->
@@ -1348,13 +1349,20 @@ function toggleVoice() {
   voiceEnabled = !voiceEnabled;
   const btn = document.getElementById('voiceBtn');
   const wave = document.getElementById('voiceWave');
+  const label = document.getElementById('voiceBtnLabel');
   if (voiceEnabled) {
     btn.style.color = '#00E5FF';
+    btn.style.borderColor = '#00E5FF';
+    btn.style.background = '#00E5FF22';
     wave.setAttribute('stroke', '#00E5FF');
+    if (label) label.textContent = 'VOICE ON';
     btn.title = 'FELLITO voice ON — tap to mute';
   } else {
     btn.style.color = '#8A8AA0';
+    btn.style.borderColor = '#2A2A3E';
+    btn.style.background = '#1E1E2E';
     wave.setAttribute('stroke', '#8A8AA0');
+    if (label) label.textContent = 'VOICE';
     btn.title = 'FELLITO voice OFF — tap to enable';
     if (currentAudio) { currentAudio.pause(); currentAudio = null; }
   }
