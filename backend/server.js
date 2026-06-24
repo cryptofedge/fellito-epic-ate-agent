@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v18';
+const CACHE = 'fellito-v19';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -971,6 +971,9 @@ textarea::placeholder{color:#8A8AA0;}
       <button class="send-btn" id="sendBtn" onclick="sendMessage()">
         <svg width="18" height="18" viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
       </button>
+      <button id="wakeBtn" onclick="toggleWakeMode()" title="Say 'Hey Fellito' to activate" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:24px;color:#8A8AA0;cursor:pointer;padding:8px 14px;display:flex;align-items:center;gap:5px;flex-shrink:0;font-size:11px;font-weight:900;letter-spacing:.5px;transition:all .2s;">
+        <span style="font-size:13px;">👂</span><span id="wakeBtnLabel">WAKE</span>
+      </button>
       <button id="talkBtn" onclick="startTalkMode()" style="background:linear-gradient(135deg,#00E5FF,#0070FF);border:none;border-radius:24px;color:#000;cursor:pointer;padding:8px 16px;display:flex;align-items:center;gap:6px;flex-shrink:0;font-size:12px;font-weight:900;letter-spacing:.5px;transition:all .2s;">
         <svg id="talkIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
         <span id="talkBtnLabel">TALK</span>
@@ -1423,6 +1426,94 @@ function startTalkMode() {
   _internalToggleMic();
 }
 
+// ── Wake word — "Hey Fellito" ──────────────────────────────────────────────
+let wakeRecog = null;
+let wakeActive = false;
+
+function toggleWakeMode() {
+  if (wakeActive) {
+    wakeActive = false;
+    wakeRecog && wakeRecog.stop();
+    wakeRecog = null;
+    const btn = document.getElementById('wakeBtn');
+    const lbl = document.getElementById('wakeBtnLabel');
+    if (btn) { btn.style.background='#1E1E2E'; btn.style.borderColor='#2A2A3E'; btn.style.color='#8A8AA0'; }
+    if (lbl) lbl.textContent = 'WAKE';
+    return;
+  }
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    addBubble('assistant', 'Wake word not supported on this browser — try Chrome.');
+    return;
+  }
+  wakeActive = true;
+  const btn = document.getElementById('wakeBtn');
+  const lbl = document.getElementById('wakeBtnLabel');
+  if (btn) { btn.style.background='#00E5FF22'; btn.style.borderColor='#00E5FF'; btn.style.color='#00E5FF'; }
+  if (lbl) lbl.textContent = '👂 LISTENING';
+  _startWakeListener();
+}
+
+function _startWakeListener() {
+  if (!wakeActive) return;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  wakeRecog = new SR();
+  wakeRecog.lang = 'en-US';
+  wakeRecog.continuous = false;
+  wakeRecog.interimResults = false;
+
+  wakeRecog.onresult = (e) => {
+    const said = Array.from(e.results).map(r => r[0].transcript).join(' ').toLowerCase();
+    if (said.includes('hey fellito') || said.includes('hey felito') || said.includes('hey f') || said.includes('a fellito') || said.includes('aye fellito')) {
+      // Wake word detected — flash and start talk loop
+      _wakeWordDetected();
+    }
+  };
+
+  wakeRecog.onend = () => {
+    // Restart loop as long as wake mode is on
+    if (wakeActive) setTimeout(() => _startWakeListener(), 300);
+  };
+
+  wakeRecog.onerror = (e) => {
+    if (e.error === 'aborted' || e.error === 'no-speech') {
+      if (wakeActive) setTimeout(() => _startWakeListener(), 300);
+    } else {
+      wakeActive = false;
+      const lbl = document.getElementById('wakeBtnLabel');
+      if (lbl) lbl.textContent = 'WAKE';
+    }
+  };
+
+  try { wakeRecog.start(); } catch(e) {}
+}
+
+function _wakeWordDetected() {
+  // Stop wake listener temporarily
+  wakeRecog && wakeRecog.stop();
+  // Flash the screen cyan
+  const phone = document.getElementById('phone');
+  if (phone) {
+    phone.style.boxShadow = '0 0 40px #00E5FF';
+    setTimeout(() => { phone.style.boxShadow = ''; }, 600);
+  }
+  // Play a quick beep to signal activation
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+    osc.start(); osc.stop(ctx.currentTime + 0.18);
+  } catch(e) {}
+  // Kick into full talk mode
+  talkModeActive = true;
+  voiceEnabled = true;
+  setTimeout(() => _internalToggleMic(), 200);
+  // Resume wake listener after talk session ends — hook into speakReply
+}
+
 // ── Voice Clone Recording ──────────────────────────────────────────────────
 let mediaRecorder = null;
 let recordingChunks = [];
@@ -1510,9 +1601,14 @@ async function speakReply(text) {
     currentAudio.onended = () => {
       URL.revokeObjectURL(url);
       currentAudio = null;
-      // Auto-loop: listen again after FELLITO finishes speaking
-      if (talkModeActive) setTimeout(() => startTalkMode(), 400);
-      else setTalkBtn('idle');
+      if (talkModeActive) {
+        // TALK mode: keep the mic loop going
+        setTimeout(() => startTalkMode(), 400);
+      } else {
+        setTalkBtn('idle');
+        // If wake mode is on, resume listening for "Hey Fellito"
+        if (wakeActive) setTimeout(() => _startWakeListener(), 400);
+      }
     };
   } catch {
     setTalkBtn('idle');
@@ -1549,9 +1645,17 @@ function _internalToggleMic() {
   };
   micRecog.onend = () => {
     micActive = false;
-    if (!talkModeActive) { setTalkBtn('idle'); return; }
+    if (!talkModeActive) {
+      setTalkBtn('idle');
+      // Hand back to wake listener if active
+      if (wakeActive) setTimeout(() => _startWakeListener(), 300);
+      return;
+    }
     if (ta.value.trim()) sendMessage();
-    else if (talkModeActive) setTimeout(() => startTalkMode(), 600);
+    else {
+      // Nothing heard — either retry or fall back to wake mode
+      if (talkModeActive) setTimeout(() => startTalkMode(), 600);
+    }
   };
   micRecog.onerror = (err) => {
     micActive = false;
