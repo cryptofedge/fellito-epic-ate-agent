@@ -57,9 +57,10 @@ app.get('/manifest.json', (_req, res) => {
 
 app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v1';
-const PRECACHE = ['/app', '/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
+const CACHE = 'fellito-v5';
+const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
@@ -72,10 +73,12 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Network-first for API calls, cache-first for static assets
-  if (e.request.url.includes('/api/') || e.request.method !== 'GET') return;
+  // Never cache HTML pages — always fetch fresh
+  const url = new URL(e.request.url);
+  if (url.pathname === '/app' || url.pathname === '/app/chat' || url.pathname.startsWith('/temp/') || e.request.url.includes('/api/') || e.request.method !== 'GET') return;
+  // Cache-first only for icons/static assets
   e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
+    caches.match(e.request).then(cached => cached || fetch(e.request))
   );
 });
 `);
@@ -1623,6 +1626,7 @@ html,body{height:100%;background:#050508;display:flex;align-items:center;justify
 // ─── Root — Consultant entry page ─────────────────────────────────────────────
 // ─── /app — permanent login for owner + contributors ─────────────────────────
 app.get('/app', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1686,6 +1690,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').cat
 });
 
 app.get('/app/chat', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   const fakeLink = { label: '', id: 'perm', browserToken: null };
   // Token is loaded from localStorage client-side; serve the shell with no token injected
   res.send(buildChatPage(fakeLink, '__PERM__', null));
