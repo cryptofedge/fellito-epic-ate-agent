@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v19';
+const CACHE = 'fellito-v20';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -971,10 +971,7 @@ textarea::placeholder{color:#8A8AA0;}
       <button class="send-btn" id="sendBtn" onclick="sendMessage()">
         <svg width="18" height="18" viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
       </button>
-      <button id="wakeBtn" onclick="toggleWakeMode()" title="Say 'Hey Fellito' to activate" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:24px;color:#8A8AA0;cursor:pointer;padding:8px 14px;display:flex;align-items:center;gap:5px;flex-shrink:0;font-size:11px;font-weight:900;letter-spacing:.5px;transition:all .2s;">
-        <span style="font-size:13px;">👂</span><span id="wakeBtnLabel">WAKE</span>
-      </button>
-      <button id="talkBtn" onclick="startTalkMode()" style="background:linear-gradient(135deg,#00E5FF,#0070FF);border:none;border-radius:24px;color:#000;cursor:pointer;padding:8px 16px;display:flex;align-items:center;gap:6px;flex-shrink:0;font-size:12px;font-weight:900;letter-spacing:.5px;transition:all .2s;">
+<button id="talkBtn" onclick="startTalkMode()" style="background:linear-gradient(135deg,#00E5FF,#0070FF);border:none;border-radius:24px;color:#000;cursor:pointer;padding:8px 16px;display:flex;align-items:center;gap:6px;flex-shrink:0;font-size:12px;font-weight:900;letter-spacing:.5px;transition:all .2s;">
         <svg id="talkIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
         <span id="talkBtnLabel">TALK</span>
       </button>
