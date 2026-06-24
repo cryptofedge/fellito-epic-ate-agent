@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v5';
+const CACHE = 'fellito-v6';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -758,7 +758,7 @@ html,body{height:100%;height:100dvh;background:#050508;color:#fff;font-family:-a
 .chip-grid{display:flex;flex-wrap:wrap;gap:8px;}
 .chip{background:#12121A;border:1px solid #1E1E2E;border-radius:20px;padding:8px 14px;font-size:13px;color:#fff;cursor:pointer;transition:all .15s;}
 .chip:active,.chip.selected{background:#00E5FF;color:#000;border-color:#00E5FF;font-weight:700;}
-.welcome-footer{background:#12121A;border-top:1px solid #1E1E2E;padding:14px 20px;padding-bottom:max(70px,env(safe-area-inset-bottom));flex-shrink:0;position:sticky;bottom:0;z-index:10;}
+.welcome-footer{background:#12121A;border-top:1px solid #1E1E2E;padding:14px 20px;padding-bottom:max(96px,env(safe-area-inset-bottom));flex-shrink:0;z-index:10;}
 .start-btn{width:100%;background:#00E5FF;color:#000;font-size:14px;font-weight:800;border:none;border-radius:14px;padding:14px;cursor:pointer;letter-spacing:.5px;transition:opacity .15s;}
 .start-btn:disabled{opacity:.4;cursor:not-allowed;}
 
@@ -776,7 +776,7 @@ html,body{height:100%;height:100dvh;background:#050508;color:#fff;font-family:-a
 .context-bar{background:#12121A;border-bottom:1px solid #1E1E2E;padding:6px 16px;display:flex;gap:8px;flex-shrink:0;}
 .ctx-chip{background:#0A0A0F;border:1px solid #1E1E2E;border-radius:12px;padding:4px 10px;font-size:11px;color:#8A8AA0;}
 .ctx-chip span{color:#00E5FF;font-weight:700;}
-.input-bar{background:#12121A;border-top:1px solid #1E1E2E;padding:10px 12px;padding-bottom:max(70px,env(safe-area-inset-bottom));display:flex;align-items:flex-end;gap:8px;flex-shrink:0;position:sticky;bottom:0;z-index:10;}
+.input-bar{background:#12121A;border-top:1px solid #1E1E2E;padding:10px 12px;padding-bottom:max(96px,env(safe-area-inset-bottom));display:flex;align-items:flex-end;gap:8px;flex-shrink:0;z-index:10;}
 .input-wrap{flex:1;background:#0A0A0F;border:1px solid #1E1E2E;border-radius:22px;padding:10px 16px;}
 textarea{width:100%;background:transparent;border:none;outline:none;color:#fff;font-size:14px;resize:none;max-height:100px;font-family:inherit;line-height:1.4;}
 textarea::placeholder{color:#8A8AA0;}
