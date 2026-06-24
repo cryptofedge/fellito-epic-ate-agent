@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v10';
+const CACHE = 'fellito-v11';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -1121,20 +1121,19 @@ function checkReady() {
   setTimeout(() => btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 150);
 }
 
-// Pin button above Android nav bar using visualViewport
-(function fixMobileLayout() {
-  if (window.innerWidth > 768) return;
-  const btn = document.getElementById('startBtn');
-  const inputBar = document.querySelector('.input-bar');
-  function applyFix() {
-    const navBarH = window.innerHeight - (window.visualViewport ? window.visualViewport.height : window.innerHeight);
-    const offset = Math.max(navBarH + 8, 60);
-    if (btn) { btn.style.marginBottom = offset + 'px'; }
-    if (inputBar) { inputBar.style.paddingBottom = offset + 'px'; }
+// Force .phone to exactly window.innerHeight so no CSS dvh quirk can push footer behind nav bar
+(function fixMobileHeight() {
+  var phone = document.querySelector('.phone');
+  function apply() {
+    if (!phone) return;
+    if (window.innerWidth <= 480) {
+      phone.style.height = window.innerHeight + 'px';
+    } else {
+      phone.style.height = '';
+    }
   }
-  applyFix();
-  if (window.visualViewport) window.visualViewport.addEventListener('resize', applyFix);
-  window.addEventListener('resize', applyFix);
+  apply();
+  window.addEventListener('resize', apply);
 }());
 
 // ── Module intro briefs (instant, no API call) ─────────────────────────────
