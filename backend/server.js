@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v11';
+const CACHE = 'fellito-v12';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -524,6 +524,28 @@ app.delete('/api/rag/docs/:docId', requireAuth, async (req, res) => {
   }
 });
 
+// ─── ElevenLabs TTS ───────────────────────────────────────────────────────────
+app.post('/api/tts', requireAuth, async (req, res) => {
+  const { text } = req.body;
+  if (!text) return res.status(400).json({ error: 'text required' });
+  const voiceId = process.env.ELEVENLABS_VOICE_ID;
+  const apiKey  = process.env.ELEVENLABS_API_KEY;
+  if (!voiceId || !apiKey) return res.status(503).json({ error: 'ElevenLabs not configured' });
+  try {
+    const clean = text.replace(/[*_`#>]/g, '').slice(0, 900);
+    const r = await axios.post(
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`,
+      { text: clean, model_id: 'eleven_turbo_v2_5', voice_settings: { stability: 0.45, similarity_boost: 0.80, style: 0.25, use_speaker_boost: true } },
+      { headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json', Accept: 'audio/mpeg' }, responseType: 'stream' }
+    );
+    res.setHeader('Content-Type', 'audio/mpeg');
+    r.data.pipe(res);
+  } catch (err) {
+    console.error('[TTS]', err.message);
+    if (!res.headersSent) res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Links Library ────────────────────────────────────────────────────────────
 app.get('/api/links', requireAuth, (_req, res) => res.json(listLinks()));
 
@@ -925,6 +947,9 @@ textarea::placeholder{color:#8A8AA0;}
       <button id="micBtn" onclick="toggleMic()" title="Voice input" style="background:none;border:none;color:#8A8AA0;cursor:pointer;padding:0 6px;display:flex;align-items:center;flex-shrink:0;">
         <svg id="micIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
       </button>
+      <button id="voiceBtn" onclick="toggleVoice()" title="FELLITO voice OFF — tap to enable" style="background:none;border:none;color:#8A8AA0;cursor:pointer;padding:0 6px;display:flex;align-items:center;flex-shrink:0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path id="voiceWave" d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="#8A8AA0"/></svg>
+      </button>
     </div>
     </div><!-- /chat-footer -->
   </div>
@@ -1315,6 +1340,44 @@ async function handleCamera(input) {
   cameraBtn.style.pointerEvents = 'auto';
 }
 
+// ── ElevenLabs voice output ────────────────────────────────────────────────
+let voiceEnabled = false;
+let currentAudio = null;
+
+function toggleVoice() {
+  voiceEnabled = !voiceEnabled;
+  const btn = document.getElementById('voiceBtn');
+  const wave = document.getElementById('voiceWave');
+  if (voiceEnabled) {
+    btn.style.color = '#00E5FF';
+    wave.setAttribute('stroke', '#00E5FF');
+    btn.title = 'FELLITO voice ON — tap to mute';
+  } else {
+    btn.style.color = '#8A8AA0';
+    wave.setAttribute('stroke', '#8A8AA0');
+    btn.title = 'FELLITO voice OFF — tap to enable';
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  }
+}
+
+async function speakReply(text) {
+  if (!voiceEnabled || !text) return;
+  try {
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    const r = await fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
+      body: JSON.stringify({ text }),
+    });
+    if (!r.ok) return;
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    currentAudio = new Audio(url);
+    currentAudio.play();
+    currentAudio.onended = () => { URL.revokeObjectURL(url); currentAudio = null; };
+  } catch {}
+}
+
 // ── Mic / Speech-to-text ───────────────────────────────────────────────────
 let micRecog = null;
 let micActive = false;
@@ -1552,7 +1615,7 @@ async function sendMessage() {
     }
     if (!bubble && fullReply) addBubble('assistant', fullReply);
     if (!fullReply) addBubble('assistant', 'Connection issue — try again.');
-    if (fullReply) chatHistory.push({ role: 'assistant', content: fullReply });
+    if (fullReply) { chatHistory.push({ role: 'assistant', content: fullReply }); speakReply(fullReply); }
   } catch {
     hideTyping();
     addBubble('assistant', 'Connection issue — try again.');
