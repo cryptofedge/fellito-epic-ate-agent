@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v13';
+const CACHE = 'fellito-v14';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -926,8 +926,9 @@ textarea::placeholder{color:#8A8AA0;}
     </div>
     <div class="messages" id="messages"></div>
     <div class="chat-footer">
-    <div style="padding:6px 12px 0;display:flex;gap:8px;">
+    <div style="padding:6px 12px 0;display:flex;gap:8px;flex-wrap:wrap;">
       <button onclick="triggerDowntime()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#FFB800;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">⏳ Downtime</button>
+      <button onclick="escalateIssue()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#FF3B5C;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">🚨 Escalate</button>
     </div>
     <div class="input-bar">
       <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none" onchange="handleUpload(this)">
@@ -1372,18 +1373,32 @@ async function speakReply(text) {
   if (!voiceEnabled || !text) return;
   try {
     if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    // Show speaking indicator
+    const voiceBtn = document.getElementById('voiceBtn');
+    const lbl = document.getElementById('voiceBtnLabel');
+    if (lbl) lbl.textContent = '🔊 SPEAKING';
+
     const r = await fetch('/api/tts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
       body: JSON.stringify({ text }),
     });
-    if (!r.ok) return;
+    if (!r.ok) { if (lbl) lbl.textContent = 'VOICE ON'; return; }
     const blob = await r.blob();
     const url = URL.createObjectURL(blob);
     currentAudio = new Audio(url);
     currentAudio.play();
-    currentAudio.onended = () => { URL.revokeObjectURL(url); currentAudio = null; };
-  } catch {}
+    currentAudio.onended = () => {
+      URL.revokeObjectURL(url);
+      currentAudio = null;
+      if (lbl) lbl.textContent = 'VOICE ON';
+      // Hands-free: auto-activate mic after FELLITO finishes speaking
+      if (voiceEnabled) setTimeout(() => toggleMic(), 400);
+    };
+  } catch {
+    const lbl = document.getElementById('voiceBtnLabel');
+    if (lbl) lbl.textContent = 'VOICE ON';
+  }
 }
 
 // ── Mic / Speech-to-text ───────────────────────────────────────────────────
@@ -1413,6 +1428,8 @@ function toggleMic() {
     micActive = true;
     btn.style.color = '#FF3B5C';
     icon.style.animation = 'pulse 1s infinite';
+    const lbl = document.getElementById('voiceBtnLabel');
+    if (voiceEnabled && lbl) lbl.textContent = '🎙️ LISTENING';
   };
 
   micRecog.onresult = (e) => {
@@ -1427,6 +1444,8 @@ function toggleMic() {
     micActive = false;
     btn.style.color = '#8A8AA0';
     icon.style.animation = '';
+    const lbl = document.getElementById('voiceBtnLabel');
+    if (voiceEnabled && lbl) lbl.textContent = 'VOICE ON';
     if (ta.value.trim()) sendMessage();
   };
 
@@ -1434,9 +1453,32 @@ function toggleMic() {
     micActive = false;
     btn.style.color = '#8A8AA0';
     icon.style.animation = '';
+    const lbl = document.getElementById('voiceBtnLabel');
+    if (voiceEnabled && lbl) lbl.textContent = 'VOICE ON';
   };
 
   micRecog.start();
+}
+
+// ── Escalate issue from chat ───────────────────────────────────────────────
+async function escalateIssue() {
+  const lastExchange = chatHistory.slice(-4);
+  if (!lastExchange.length) { addBubble('assistant', 'Nothing to escalate yet — ask me something first.'); return; }
+  const summary = lastExchange.map(m => (m.role === 'user' ? 'User: ' : 'FELLITO: ') + m.content).join('\n').slice(0, 400);
+  const title = prompt('Describe the issue in one line:');
+  if (!title) return;
+  try {
+    const r = await fetch('/api/issues', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
+      body: JSON.stringify({ title, description: summary, module: selectedModule, dept: selectedDept, goLiveId: selectedGoLiveId, severity: 'high' }),
+    });
+    if (r.ok) {
+      addBubble('assistant', '🚨 Issue logged sharp sharp — "' + title + '". Leadership can see it in the admin panel.');
+    } else {
+      addBubble('assistant', 'Could not log issue — try again.');
+    }
+  } catch { addBubble('assistant', 'Connection issue — could not escalate.'); }
 }
 
 // ── Nearby ─────────────────────────────────────────────────────────────────
