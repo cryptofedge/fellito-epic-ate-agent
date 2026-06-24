@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v9';
+const CACHE = 'fellito-v10';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -793,11 +793,13 @@ textarea::placeholder{color:#8A8AA0;}
 
 @media(max-width:480px){
   .shell{padding:0;}
-  .phone{max-width:100%;height:100dvh;border-radius:0;border:none;box-shadow:none;padding-bottom:env(safe-area-inset-bottom);}
+  .phone{max-width:100%;height:100dvh;border-radius:0;border:none;box-shadow:none;}
   .expired-overlay{border-radius:0;}
   .status-bar{display:none;}
-  .welcome-footer{border-radius:20px 20px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,.5);}
-  .chat-footer{border-radius:20px 20px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,.5);}
+  .welcome-footer{position:fixed;bottom:0;left:0;right:0;padding:14px 20px;padding-bottom:max(env(safe-area-inset-bottom),72px);border-radius:20px 20px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,.5);}
+  .welcome-body{padding-bottom:130px;}
+  .chat-footer{position:fixed;bottom:0;left:0;right:0;padding-bottom:max(env(safe-area-inset-bottom),72px);border-radius:20px 20px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,.5);}
+  .messages{padding-bottom:130px;}
 }
 </style>
 </head>
