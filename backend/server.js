@@ -912,16 +912,10 @@ textarea::placeholder{color:#8A8AA0;}
   <!-- ── SCREEN 1: Welcome / Go-Live Orientation ── -->
   <div class="screen active" id="screen-welcome">
     <div class="welcome-body">
-      <!-- PHI Warning -->
-      <div style="background:rgba(255,59,92,.08);border:2px solid #FF3B5C;border-radius:14px;padding:16px;">
-        <div style="font-size:12px;font-weight:900;color:#FF3B5C;letter-spacing:2px;margin-bottom:8px;">⛔ PHI STRICTLY PROHIBITED</div>
-        <div style="font-size:12px;color:#fff;line-height:1.7;">FELLITO <strong>never</strong> sees or processes:</div>
-        <ul style="margin:6px 0 8px 16px;font-size:12px;color:#FF3B5C;font-weight:700;line-height:2;">
-          <li>Patient names, MRNs, DOBs, SSNs</li>
-          <li>Clinical records or charts</li>
-          <li>Any PHI in any form</li>
-        </ul>
-        <div style="font-size:11px;color:#FF3B5C;font-weight:800;letter-spacing:1px;">ANY SUCH INFORMATION WILL BE IMMEDIATELY REJECTED.</div>
+      <!-- PHI Warning — compact banner -->
+      <div style="background:rgba(255,59,92,.08);border:1px solid #FF3B5C;border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:14px;">⛔</span>
+        <span style="font-size:11px;font-weight:800;color:#FF3B5C;letter-spacing:.5px;">NO PHI — patient names, MRNs, DOBs, or clinical records. Workflow questions only.</span>
       </div>
 
       <div>
@@ -1101,6 +1095,7 @@ async function loadGoLive() {
 
   // Render Go-Live dropdown
   const glc = document.getElementById('goLiveChips');
+  if (!glc) return;
   glc.innerHTML = '';
   const active = lives.filter(g => g.active);
   const list   = active.length ? active : lives;
@@ -1109,7 +1104,13 @@ async function loadGoLive() {
   sel.style.cssText = 'width:100%;background:#0A0A0F;border:1px solid #2A2A3E;border-radius:12px;color:#fff;font-size:14px;padding:12px 16px;outline:none;font-family:inherit;cursor:pointer;';
 
   if (!list.length) {
-    glc.innerHTML = '<div style="color:#FF3B5C;font-size:13px;padding:10px 0;">No active Go-Lives available. Contact your admin.</div>';
+    glc.innerHTML = '<div style="color:#8A8AA0;font-size:13px;padding:6px 0;">No active Go-Lives — ask your admin to add one, or type your Go-Live below.</div>';
+    // Still allow manual entry so the consultant isn't blocked
+    const inp = document.createElement('input');
+    inp.placeholder = 'Type your Go-Live name...';
+    inp.style.cssText = 'width:100%;background:#0A0A0F;border:1px solid #2A2A3E;border-radius:12px;color:#fff;font-size:14px;padding:12px 16px;outline:none;font-family:inherit;box-sizing:border-box;margin-top:8px;';
+    inp.oninput = () => { selectedGoLive = inp.value.trim(); selectedGoLiveId = ''; checkReady(); };
+    glc.appendChild(inp);
     return;
   }
 
