@@ -659,10 +659,12 @@ app.get('/temp/:token', (req, res) => {
   try {
     const { link, isNew } = openLink(req.params.token, ip, cookieToken);
     const msLeft = link.sessionExpiresAt - Date.now();
+    const MAX_JWT_MS = 30 * 24 * 60 * 60 * 1000; // JWT exp can't exceed int32 — cap at 30 days
+    const jwtExpSecs = Math.floor(Math.min(msLeft, MAX_JWT_MS) / 1000);
     const jwtToken = signToken(
       { sub: `temp_${link.id}`, name: link.label || 'Guest', temp: true, linkId: link.id,
         browserToken: link.browserToken, assignedGoLives: link.goLiveId ? [link.goLiveId] : [] },
-      Math.floor(msLeft / 1000) + 's'
+      jwtExpSecs + 's'
     );
     if (isNew) {
       res.cookie('_ft', link.browserToken, { httpOnly: true, maxAge: SESSION_TTL_MS, sameSite: 'strict' });
