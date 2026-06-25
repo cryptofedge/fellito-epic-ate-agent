@@ -630,8 +630,8 @@ app.get('/api/issues/report/:goLiveId', requireAuth, (req, res) => {
 
 app.post('/api/temp-links', requireOwner, async (req, res) => {
   try {
-    const { label, goLiveId, assignedModules, toEmail } = req.body;
-    const link = createTempLink({ label, goLiveId, assignedModules });
+    const { label, goLiveId, assignedModules, toEmail, permanent } = req.body;
+    const link = createTempLink({ label, goLiveId, assignedModules, permanent });
     const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.BACKEND_PORT || 3001}`;
     const inviteUrl = `${baseUrl}/temp/${link.token}`;
 

@@ -29,7 +29,9 @@ function save(links) {
   fs.writeFileSync(FILE, JSON.stringify(clean, null, 2), 'utf8');
 }
 
-function createTempLink({ label = '', goLiveId = null, assignedModules = [] } = {}) {
+const PERMANENT_TTL_MS = 100 * 365 * 24 * 60 * 60 * 1000; // ~100 years
+
+function createTempLink({ label = '', goLiveId = null, assignedModules = [], permanent = false } = {}) {
   const links = load();
   const token = crypto.randomBytes(24).toString('hex'); // URL token
   const now   = Date.now();
@@ -39,9 +41,10 @@ function createTempLink({ label = '', goLiveId = null, assignedModules = [] } = 
     label,
     goLiveId,
     assignedModules,
+    permanent: !!permanent,
     status: 'pending',          // pending | active | expired | revoked
     createdAt: now,
-    linkExpiresAt: now + LINK_TTL_MS,
+    linkExpiresAt: permanent ? now + PERMANENT_TTL_MS : now + LINK_TTL_MS,
     openedAt: null,
     sessionExpiresAt: null,
     revokedAt: null,
@@ -83,7 +86,7 @@ function openLink(token, requestIp, cookieToken) {
       ...link,
       status: 'active',
       openedAt: now,
-      sessionExpiresAt: now + SESSION_TTL_MS,
+      sessionExpiresAt: link.permanent ? now + PERMANENT_TTL_MS : now + SESSION_TTL_MS,
       boundIp: requestIp,
       browserToken: newBrowserToken,
     };
