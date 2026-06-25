@@ -925,7 +925,7 @@ textarea::placeholder{color:#8A8AA0;}
 
       <div>
         <div class="section-title">SELECT YOUR GO-LIVE</div>
-        <div class="chip-grid" id="goLiveChips"><div style="color:#8A8AA0;font-size:13px;">Loading Go-Lives...</div></div>
+        <div class="chip-grid" id="goLiveChips"></div>
       </div>
 
       <div>
