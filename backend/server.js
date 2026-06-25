@@ -759,7 +759,7 @@ function buildChatPage(link, jwtToken, msLeft) {
 
   // Embed go-lives at render time — no API fetch needed, never fails
   const { listGoLives } = require('./goLiveStore');
-  const allGoLives  = listGoLives();
+  const allGoLives  = listGoLives({ role: 'owner' });
   const activeGoLives = allGoLives.filter(g => g.active).length ? allGoLives.filter(g => g.active) : allGoLives;
 
   return `<!DOCTYPE html>
