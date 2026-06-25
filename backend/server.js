@@ -757,6 +757,11 @@ function buildChatPage(link, jwtToken, msLeft) {
   const ALL_MODULES = ['ClinDoc','CPOE','ASAP (ED)','Beacon (Oncology)','Beaker (Lab)','ADT','OpTime (Surgical)','Prelude (Registration)','Cadence (Scheduling)','Radiant (Radiology)','MyChart','Willow (Pharmacy)','Stork (OB)','Resolute (Rev Cycle)','In Basket','Haiku/Canto (Mobile)','Reporting/Analytics','HIM','Healthy Planet'];
   const ALL_DEPTS   = ['ICU','Emergency Department','Med/Surg','Oncology','OR/Surgical','Radiology','Pharmacy','Registration','Labor & Delivery','Pediatrics','PACU','Outpatient Clinic','Blood Bank','Pathology'];
 
+  // Embed go-lives at render time — no API fetch needed, never fails
+  const { listGoLives } = require('./goLiveStore');
+  const allGoLives  = listGoLives();
+  const activeGoLives = allGoLives.filter(g => g.active).length ? allGoLives.filter(g => g.active) : allGoLives;
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1015,8 +1020,9 @@ if ('${jwtToken}' === '__PERM__' && !TOKEN) { window.location.href = '/app'; }
 const SESSION_EXPIRES_AT = ${link.sessionExpiresAt ?? 0};
 const GOLIVE_ID = '${link.goLiveId || ''}';
 const USER_NAME = '${name}';
-const ALL_MODULES = ${JSON.stringify(ALL_MODULES)};
-const ALL_DEPTS   = ${JSON.stringify(ALL_DEPTS)};
+const ALL_MODULES  = ${JSON.stringify(ALL_MODULES)};
+const ALL_DEPTS    = ${JSON.stringify(ALL_DEPTS)};
+const GOLIVES_DATA = ${JSON.stringify(activeGoLives)};
 
 let selectedGoLive   = '';
 let selectedGoLiveId = GOLIVE_ID || '';
@@ -1078,27 +1084,15 @@ function expire() {
 }
 
 // ── Load Go-Live info + render all selection chips ─────────────────────────
-async function loadGoLive() {
-  // Render modules and depts immediately — never block on Go-Live fetch
+function loadGoLive() {
   renderModules();
   renderDepts();
 
-  // Fetch Go-Lives with a 5s timeout so it never hangs forever
-  let lives = [];
-  try {
-    const controller = new AbortController();
-    const tid = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch('/api/golives', { headers: { Authorization: 'Bearer ' + TOKEN }, signal: controller.signal });
-    clearTimeout(tid);
-    if (res.ok) lives = await res.json();
-  } catch {}
-
-  // Render Go-Live dropdown
+  // Go-Lives are embedded at page-render time — no network call needed
   const glc = document.getElementById('goLiveChips');
   if (!glc) return;
   glc.innerHTML = '';
-  const active = lives.filter(g => g.active);
-  const list   = active.length ? active : lives;
+  const list = GOLIVES_DATA;
 
   const sel = document.createElement('select');
   sel.style.cssText = 'width:100%;background:#0A0A0F;border:1px solid #2A2A3E;border-radius:12px;color:#fff;font-size:14px;padding:12px 16px;outline:none;font-family:inherit;cursor:pointer;';
