@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v22';
+const CACHE = 'fellito-v23';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -1135,6 +1135,49 @@ textarea::placeholder{color:#8A8AA0;}
     </div>
   </div>
 
+  <!-- Issue Board Modal -->
+  <div id="boardModal" style="display:none;position:absolute;inset:0;background:#000000CC;z-index:200;overflow-y:auto;padding:20px 14px;">
+    <div style="background:#12121A;border:1px solid #1E1E2E;border-radius:20px;padding:22px;max-width:420px;margin:0 auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <div style="font-size:15px;font-weight:900;color:#A78BFA;letter-spacing:1px;">📊 ISSUE BOARD</div>
+        <button onclick="document.getElementById('boardModal').style.display='none'" style="background:none;border:none;color:#8A8AA0;font-size:20px;cursor:pointer;line-height:1;">×</button>
+      </div>
+      <div id="boardGoLive" style="font-size:11px;color:#8A8AA0;letter-spacing:1px;margin-bottom:18px;"></div>
+
+      <!-- Column: Open -->
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <div style="width:8px;height:8px;background:#FF3B5C;border-radius:50%;flex-shrink:0;"></div>
+          <div style="font-size:11px;color:#FF3B5C;font-weight:900;letter-spacing:1px;">OPEN</div>
+          <div id="boardCountOpen" style="font-size:11px;color:#8A8AA0;"></div>
+        </div>
+        <div id="boardColOpen" style="display:flex;flex-direction:column;gap:6px;min-height:32px;"></div>
+      </div>
+
+      <!-- Column: In Progress -->
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <div style="width:8px;height:8px;background:#FFB800;border-radius:50%;flex-shrink:0;"></div>
+          <div style="font-size:11px;color:#FFB800;font-weight:900;letter-spacing:1px;">IN PROGRESS</div>
+          <div id="boardCountProgress" style="font-size:11px;color:#8A8AA0;"></div>
+        </div>
+        <div id="boardColProgress" style="display:flex;flex-direction:column;gap:6px;min-height:32px;"></div>
+      </div>
+
+      <!-- Column: Resolved -->
+      <div style="margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <div style="width:8px;height:8px;background:#00FF88;border-radius:50%;flex-shrink:0;"></div>
+          <div style="font-size:11px;color:#00FF88;font-weight:900;letter-spacing:1px;">RESOLVED</div>
+          <div id="boardCountResolved" style="font-size:11px;color:#8A8AA0;"></div>
+        </div>
+        <div id="boardColResolved" style="display:flex;flex-direction:column;gap:6px;min-height:32px;"></div>
+      </div>
+
+      <div id="boardEmpty" style="display:none;text-align:center;padding:20px 0;color:#8A8AA0;font-size:13px;">No issues logged yet — use 🚨 Escalate to add one.</div>
+    </div>
+  </div>
+
   <!-- Quiz Modal -->
   <div id="quizModal" style="display:none;position:absolute;inset:0;background:#000000DD;z-index:200;overflow-y:auto;padding:20px 14px;">
     <div style="background:#12121A;border:1px solid #1E1E2E;border-radius:20px;padding:22px;max-width:400px;margin:0 auto;">
@@ -1188,7 +1231,8 @@ textarea::placeholder{color:#8A8AA0;}
     <div style="padding:6px 12px 0;display:flex;gap:8px;flex-wrap:wrap;">
       <button onclick="triggerDowntime()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#FFB800;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">⏳ Downtime</button>
       <button onclick="escalateIssue()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#FF3B5C;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">🚨 Escalate</button>
-      <button onclick="openShiftModal()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#00FF88;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">📋 End Shift</button>
+      <button onclick="openBoard()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#A78BFA;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">📊 Board</button>
+      <button onclick="openShiftModal()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#00FF88;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">🏁 End Shift</button>
     </div>
     <div class="input-bar">
       <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none" onchange="handleUpload(this)">
@@ -1846,6 +1890,74 @@ async function escalateIssue() {
       addBubble('assistant', 'Could not log issue — try again.');
     }
   } catch { addBubble('assistant', 'Connection issue — could not escalate.'); }
+}
+
+// ── Issue Board (Kanban) ───────────────────────────────────────────────────
+async function openBoard() {
+  document.getElementById('boardModal').style.display = 'block';
+  document.getElementById('boardGoLive').textContent = (selectedGoLive || 'All Issues').toUpperCase();
+  await refreshBoard();
+}
+
+async function refreshBoard() {
+  try {
+    const url = '/api/issues' + (selectedGoLiveId ? '?goLiveId=' + selectedGoLiveId : '');
+    const r = await fetch(url, { headers: { Authorization: 'Bearer ' + TOKEN } });
+    const issues = await r.json();
+
+    const open     = issues.filter(i => i.status === 'open');
+    const progress = issues.filter(i => i.status === 'in-progress');
+    const resolved = issues.filter(i => i.status === 'resolved');
+
+    document.getElementById('boardCountOpen').textContent     = '(' + open.length + ')';
+    document.getElementById('boardCountProgress').textContent = '(' + progress.length + ')';
+    document.getElementById('boardCountResolved').textContent = '(' + resolved.length + ')';
+    document.getElementById('boardEmpty').style.display = issues.length === 0 ? 'block' : 'none';
+
+    renderBoardCol('boardColOpen',     open,     ['in-progress', 'resolved']);
+    renderBoardCol('boardColProgress', progress, ['open',        'resolved']);
+    renderBoardCol('boardColResolved', resolved, ['open',        'in-progress']);
+  } catch { /* silent */ }
+}
+
+function renderBoardCol(colId, issues, nextStatuses) {
+  const col = document.getElementById(colId);
+  col.innerHTML = '';
+  if (!issues.length) {
+    col.innerHTML = '<div style="font-size:11px;color:#333;padding:8px 12px;border:1px dashed #2A2A3E;border-radius:8px;text-align:center;">—</div>';
+    return;
+  }
+  issues.forEach(issue => {
+    const sevColor = issue.severity === 'high' || issue.severity === 'critical' ? '#FF3B5C' : issue.severity === 'medium' ? '#FFB800' : '#8A8AA0';
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#0A0A0F;border:1px solid #1E1E2E;border-radius:10px;padding:10px 12px;';
+
+    const btnHtml = nextStatuses.map(s => {
+      const label = s === 'in-progress' ? '▶ Start' : s === 'resolved' ? '✓ Resolve' : '↩ Reopen';
+      const color = s === 'resolved' ? '#00FF88' : s === 'in-progress' ? '#FFB800' : '#8A8AA0';
+      return `<button onclick="moveIssue('${issue.id}','${s}')" style="background:none;border:1px solid ${color};border-radius:8px;color:${color};font-size:10px;font-weight:700;padding:3px 8px;cursor:pointer;">${label}</button>`;
+    }).join('');
+
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
+        <div style="font-size:13px;color:#fff;font-weight:600;line-height:1.4;">${issue.title}</div>
+        <span style="flex-shrink:0;background:${sevColor}22;color:${sevColor};font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;">${issue.severity||'med'}</span>
+      </div>
+      <div style="font-size:11px;color:#8A8AA0;margin-bottom:8px;">${issue.module||''}${issue.department ? ' · ' + issue.department : ''}</div>
+      <div style="display:flex;gap:6px;">${btnHtml}</div>`;
+    col.appendChild(card);
+  });
+}
+
+async function moveIssue(id, newStatus) {
+  try {
+    await fetch('/api/issues/' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    await refreshBoard();
+  } catch { /* silent */ }
 }
 
 // ── Pre-Go-Live Quiz ──────────────────────────────────────────────────────
