@@ -4,7 +4,7 @@
     "email": "cryptofedge@gmail.com",
     "name": "Fellito Rodriguez",
     "role": "owner",
-    "passwordHash": "$2a$12$/i.5f3u10J.Z6H87C1tC0OdJBm/GBMvCHuFRpsZOR1sUD7Wd.M0E6",
+    "passwordHash": "$2a$12$mg5h3rrR5.UgyTJdn30G.uDneY/H78CWPhAVWomP.tzlT6adlr9j.",
     "createdAt": 1782063512484,
     "active": true,
     "assignedGoLives": []
@@ -34,7 +34,7 @@
     "email": "thefiltah@gmail.com",
     "name": "Ralph",
     "role": "contributor",
-    "passwordHash": "$2a$12$4VdfNwg3KeHocdlw8QFHPuQlLKyG9dcE7TR.hS95tyiNGFJ1NXLPm",
+    "passwordHash": "$2a$12$pPcZm6icIlkENEEMr5dvEe8BW.WH/ft1wYIN4vHvGpSLfJqhgHXCO",
     "createdAt": 1782223165251,
     "active": true,
     "assignedGoLives": []
