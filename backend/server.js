@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v25';
+const CACHE = 'fellito-v26';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -1004,13 +1004,13 @@ textarea::placeholder{color:#8A8AA0;}
 
 @media(max-width:480px){
   .shell{padding:0;}
-  .phone{max-width:100%;height:100dvh;border-radius:0;border:none;box-shadow:none;overflow:hidden;}
+  /* No overflow:hidden on mobile — Samsung Chrome kills touch events in the clipped zone */
+  .phone{max-width:100%;border-radius:0;border:none;box-shadow:none;}
   .expired-overlay{border-radius:0;}
   .status-bar{display:none;}
-  /* Stay in flex — do NOT use position:fixed (Samsung overflow:hidden clips fixed children) */
-  .welcome-footer{position:static;padding:14px 20px 16px;flex-shrink:0;}
+  .welcome-footer{position:static;padding:14px 20px env(safe-area-inset-bottom,16px);flex-shrink:0;}
   .welcome-body{flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;}
-  .chat-footer{position:static;flex-shrink:0;}
+  .chat-footer{position:static;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom,0px);}
   .messages{flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;padding-bottom:8px;}
 }
 </style>
@@ -1397,18 +1397,24 @@ function checkReady() {
   setTimeout(() => btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 150);
 }
 
-// Force .phone to exactly window.innerHeight so no CSS dvh quirk can push footer behind nav bar
+// Use visualViewport.height — the only value Samsung Chrome reports correctly
+// (window.innerHeight includes the nav bar; visualViewport.height is the real tappable area)
 (function fixMobileHeight() {
   var phone = document.querySelector('.phone');
   function apply() {
     if (!phone) return;
     if (window.innerWidth <= 480) {
-      phone.style.height = window.innerHeight + 'px';
+      var h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+      phone.style.height = h + 'px';
     } else {
       phone.style.height = '';
     }
   }
   apply();
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', apply);
+    window.visualViewport.addEventListener('scroll', apply);
+  }
   window.addEventListener('resize', apply);
 }());
 
