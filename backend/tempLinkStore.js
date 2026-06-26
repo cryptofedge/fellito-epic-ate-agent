@@ -1,11 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { DATA_DIR } = require('./storagePaths');
 
-const DATA_DIR = path.join(__dirname, 'data');
 const FILE = path.join(DATA_DIR, 'temp_links.json');
-
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const LINK_TTL_MS    = 30 * 24 * 60 * 60 * 1000; // 30 days to first open
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;        // 8 hours of chat after opening

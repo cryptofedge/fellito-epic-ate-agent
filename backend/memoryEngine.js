@@ -7,14 +7,13 @@
 
 const fs   = require('fs');
 const path = require('path');
+const { DATA_DIR } = require('./storagePaths');
 
-const STORE_DIR  = path.join(__dirname, 'data');
+const STORE_DIR  = DATA_DIR;
 const STORE_FILE = path.join(STORE_DIR, 'user-memory.json');
 const MAX_RECENT = 30;
 const MAX_INSIGHTS = 50;
 const MAX_JOURNALS = 20; // keep last 20 Go-Live session journals per user
-
-if (!fs.existsSync(STORE_DIR)) fs.mkdirSync(STORE_DIR, { recursive: true });
 
 function load() {
   if (!fs.existsSync(STORE_FILE)) return {};

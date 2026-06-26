@@ -18,6 +18,7 @@ const { createTempLink, listTempLinks, openLink, revokeTempLink, validateTempSes
 const { sendInviteEmail, sendShiftEmail } = require('./emailService');
 const cookieParser = require('cookie-parser');
 const { signToken } = require('./authEngine');
+const { DATA_DIR, UPLOAD_DIR } = require('./storagePaths');
 
 const app = express();
 const PORT = process.env.PORT ?? process.env.BACKEND_PORT ?? 3001;
@@ -87,7 +88,7 @@ self.addEventListener('fetch', e => {
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const upload = multer({
-  dest: path.join(__dirname, 'uploads'),
+  dest: UPLOAD_DIR,
   limits: { fileSize: 25 * 1024 * 1024 },
 });
 
@@ -2636,7 +2637,7 @@ app.post('/api/auth/reset-pw', async (req, res) => {
   const { secret, email, newPassword } = req.body;
   if (secret !== process.env.OWNER_MAGIC_SECRET) return res.status(403).json({ error: 'Denied' });
   const fs = require('fs'), path = require('path');
-  const file = path.join(__dirname, 'data', 'users.json');
+  const file = path.join(DATA_DIR, 'users.json');
   const users = JSON.parse(fs.readFileSync(file, 'utf8'));
   const u = users.find(x => x.email.toLowerCase() === email.toLowerCase());
   if (!u) return res.status(404).json({ error: 'User not found' });

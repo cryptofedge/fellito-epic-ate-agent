@@ -1,11 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { DATA_DIR } = require('./storagePaths');
 
-const DATA_DIR = path.join(__dirname, 'data');
 const ISSUES_FILE = path.join(DATA_DIR, 'issues.json');
-
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 function load() {
   if (!fs.existsSync(ISSUES_FILE)) return [];

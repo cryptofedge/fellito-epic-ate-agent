@@ -5,10 +5,16 @@ services:
     rootDir: backend
     buildCommand: npm install
     startCommand: node server.js
-    plan: free
+    plan: starter
+    disk:
+      name: fellito-data
+      mountPath: /var/data/fellito
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
+      - key: DATA_DIR
+        value: /var/data/fellito/data
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: ELEVENLABS_API_KEY
@@ -20,6 +26,10 @@ services:
       - key: GMAIL_APP_PASSWORD
         sync: false
       - key: JWT_SECRET
+        sync: false
+      - key: OWNER_EMAIL
+        sync: false
+      - key: OWNER_PASSWORD
         sync: false
       - key: OWNER_MAGIC_SECRET
         sync: false

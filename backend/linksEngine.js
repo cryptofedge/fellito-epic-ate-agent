@@ -3,11 +3,9 @@ const path = require('path');
 const crypto = require('crypto');
 const https = require('https');
 const http = require('http');
+const { DATA_DIR } = require('./storagePaths');
 
-const DATA_DIR = path.join(__dirname, 'data');
 const LINKS_FILE = path.join(DATA_DIR, 'links.json');
-
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 function loadLinks() {
   if (!fs.existsSync(LINKS_FILE)) return [];

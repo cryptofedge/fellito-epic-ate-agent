@@ -11,17 +11,16 @@
 const fs = require('fs');
 const path = require('path');
 const { createHash } = require('crypto');
+const { VECTOR_STORE_DIR } = require('./storagePaths');
 
 // PDF parsing
 let pdfParse;
 try { pdfParse = require('pdf-parse'); } catch { pdfParse = null; }
 
-const STORE_DIR = path.join(__dirname, 'vector-store');
+const STORE_DIR = VECTOR_STORE_DIR;
 const STORE_FILE = path.join(STORE_DIR, 'chunks.json');
 const CHUNK_SIZE = 600; // characters per chunk
 const CHUNK_OVERLAP = 100;
-
-if (!fs.existsSync(STORE_DIR)) fs.mkdirSync(STORE_DIR, { recursive: true });
 
 // In-memory chunk store: { id, docId, filename, sessionId, moduleTag, text, tokens }
 let chunks = [];
