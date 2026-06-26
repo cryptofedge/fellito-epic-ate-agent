@@ -61,7 +61,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v34';
+const CACHE = 'fellito-v35';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -840,11 +840,11 @@ app.post('/api/offline/seed', requireAuth, async (req, res) => {
     ? `\nGO-LIVE WORKFLOW CONTEXT (use this to make questions site-specific):\n${ragContext}\n`
     : '';
 
-  const prompt = `You are FELLITO — a 13-year Epic Credentialed Trainer. Generate 50 Q&A pairs covering the most common questions a consultant gets from users on Day 1 of Epic ${moduleTag} go-live${dept ? ' in the ' + dept + ' department' : ''}.${contextBlock}
+  const prompt = `You are FELLITO — a 13-year Epic Credentialed Trainer. Generate exactly 25 Q&A pairs covering the most common questions a consultant gets from users on Day 1 of Epic ${moduleTag} go-live${dept ? ' in the ' + dept + ' department' : ''}.${contextBlock}
 
 Rules:
 - Cover: login issues, basic navigation, order entry, common errors, workflows, printing, downtime
-- Short answers (2-4 sentences max) — floor-level, no jargon
+- Short answers (2-3 sentences max) — floor-level, no jargon
 - Mix of quick fixes, how-to steps, and escalation guidance
 - ${ragContext ? 'Prioritize site-specific workflows from the context above' : 'Be specific to ' + moduleTag + ', no generic Epic platitudes'}
 
@@ -858,8 +858,8 @@ Return ONLY valid JSON, no extra text:
 
   try {
     const msg = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 2048,
       messages: [{ role: 'user', content: prompt }],
     });
     const raw = msg.content[0].text.trim().replace(/^```json\s*/,'').replace(/```$/,'').trim();
