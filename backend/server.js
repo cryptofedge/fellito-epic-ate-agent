@@ -757,10 +757,25 @@ function buildChatPage(link, jwtToken, msLeft) {
   const ALL_MODULES = ['ClinDoc','CPOE','ASAP (ED)','Beacon (Oncology)','Beaker (Lab)','ADT','OpTime (Surgical)','Prelude (Registration)','Cadence (Scheduling)','Radiant (Radiology)','MyChart','Willow (Pharmacy)','Stork (OB)','Resolute (Rev Cycle)','In Basket','Haiku/Canto (Mobile)','Reporting/Analytics','HIM','Healthy Planet'];
   const ALL_DEPTS   = ['ICU','Emergency Department','Med/Surg','Oncology','OR/Surgical','Radiology','Pharmacy','Registration','Labor & Delivery','Pediatrics','PACU','Outpatient Clinic','Blood Bank','Pathology'];
 
-  // Embed go-lives at render time — no API fetch needed, never fails
+  // Render all selections server-side — zero JS dependency, never fails
   const { listGoLives } = require('./goLiveStore');
-  const allGoLives  = listGoLives({ role: 'owner' });
+  const allGoLives    = listGoLives({ role: 'owner' });
   const activeGoLives = allGoLives.filter(g => g.active).length ? allGoLives.filter(g => g.active) : allGoLives;
+
+  // Build Go-Live HTML server-side
+  const goLiveOptionsHtml = activeGoLives.map(gl =>
+    `<option value="${gl.id}">${gl.name.replace(/"/g,'&quot;')}</option>`
+  ).join('');
+
+  // Build module chips HTML server-side
+  const moduleChipsHtml = ALL_MODULES.map(m =>
+    `<div class="chip" onclick="selectModule(this,'${m.replace(/'/g,"\\'")}')">${m}</div>`
+  ).join('');
+
+  // Build dept chips HTML server-side
+  const deptChipsHtml = ALL_DEPTS.map(d =>
+    `<div class="chip" onclick="selectDept(this,'${d.replace(/'/g,"\\'")}')">${d}</div>`
+  ).join('');
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -925,17 +940,17 @@ textarea::placeholder{color:#8A8AA0;}
 
       <div>
         <div class="section-title">SELECT YOUR GO-LIVE</div>
-        <div class="chip-grid" id="goLiveChips"></div>
+        <div id="goLiveChips">${activeGoLives.length ? `<select id="goLiveSelect" onchange="selectGoLive(this)" style="width:100%;background:#0A0A0F;border:1px solid #2A2A3E;border-radius:12px;color:#fff;font-size:14px;padding:12px 16px;outline:none;font-family:inherit;cursor:pointer;"><option value="" disabled selected>Select your Go-Live...</option>${goLiveOptionsHtml}</select>` : `<input id="goLiveInput" placeholder="Type your Go-Live name..." oninput="selectedGoLive=this.value.trim();selectedGoLiveId='';checkReady();" style="width:100%;background:#0A0A0F;border:1px solid #2A2A3E;border-radius:12px;color:#fff;font-size:14px;padding:12px 16px;outline:none;font-family:inherit;box-sizing:border-box;">`}</div>
       </div>
 
       <div>
         <div class="section-title">SELECT YOUR MODULE</div>
-        <div class="chip-grid" id="moduleChips"></div>
+        <div class="chip-grid" id="moduleChips">${moduleChipsHtml}</div>
       </div>
 
       <div>
         <div class="section-title">SELECT YOUR DEPARTMENT</div>
-        <div class="chip-grid" id="deptChips"></div>
+        <div class="chip-grid" id="deptChips">${deptChipsHtml}</div>
       </div>
 
     </div>
@@ -1022,7 +1037,6 @@ const GOLIVE_ID = '${link.goLiveId || ''}';
 const USER_NAME = '${name}';
 const ALL_MODULES  = ${JSON.stringify(ALL_MODULES)};
 const ALL_DEPTS    = ${JSON.stringify(ALL_DEPTS)};
-const GOLIVES_DATA = ${JSON.stringify(activeGoLives)};
 
 let selectedGoLive   = '';
 let selectedGoLiveId = GOLIVE_ID || '';
@@ -1084,92 +1098,39 @@ function expire() {
 }
 
 // ── Load Go-Live info + render all selection chips ─────────────────────────
+// All selections are pre-rendered server-side — these are just event handlers
 function loadGoLive() {
-  renderModules();
-  renderDepts();
-
-  // Go-Lives are embedded at page-render time — no network call needed
-  const glc = document.getElementById('goLiveChips');
-  if (!glc) return;
-  glc.innerHTML = '';
-  const list = GOLIVES_DATA;
-
-  const sel = document.createElement('select');
-  sel.style.cssText = 'width:100%;background:#0A0A0F;border:1px solid #2A2A3E;border-radius:12px;color:#fff;font-size:14px;padding:12px 16px;outline:none;font-family:inherit;cursor:pointer;';
-
-  if (!list.length) {
-    glc.innerHTML = '<div style="color:#8A8AA0;font-size:13px;padding:6px 0;">No active Go-Lives — ask your admin to add one, or type your Go-Live below.</div>';
-    // Still allow manual entry so the consultant isn't blocked
-    const inp = document.createElement('input');
-    inp.placeholder = 'Type your Go-Live name...';
-    inp.style.cssText = 'width:100%;background:#0A0A0F;border:1px solid #2A2A3E;border-radius:12px;color:#fff;font-size:14px;padding:12px 16px;outline:none;font-family:inherit;box-sizing:border-box;margin-top:8px;';
-    inp.oninput = () => { selectedGoLive = inp.value.trim(); selectedGoLiveId = ''; checkReady(); };
-    glc.appendChild(inp);
-    return;
+  // Auto-select go-live if pre-assigned
+  if (GOLIVE_ID) {
+    const sel = document.getElementById('goLiveSelect');
+    if (sel) {
+      sel.value = GOLIVE_ID;
+      selectGoLive(sel);
+    }
   }
-
-  const placeholder = document.createElement('option');
-  placeholder.value = '';
-  placeholder.textContent = 'Select your Go-Live...';
-  placeholder.disabled = true;
-  placeholder.selected = true;
-  sel.appendChild(placeholder);
-
-  list.forEach(gl => {
-    const opt = document.createElement('option');
-    opt.value = gl.id;
-    opt.textContent = gl.name;
-    if (GOLIVE_ID && gl.id === GOLIVE_ID) {
-      opt.selected = true;
-      selectedGoLive   = gl.name;
-      selectedGoLiveId = gl.id;
-    }
-    sel.appendChild(opt);
-  });
-
-  sel.addEventListener('change', function() {
-    const chosen = list.find(g => g.id === this.value);
-    if (chosen) {
-      selectedGoLive   = chosen.name;
-      selectedGoLiveId = chosen.id;
-      checkReady();
-    }
-  });
-
-  glc.appendChild(sel);
-  if (selectedGoLive) checkReady();
 }
 
-function renderModules() {
-  const mc = document.getElementById('moduleChips');
-  mc.innerHTML = '';
-  ALL_MODULES.forEach(m => {
-    const c = document.createElement('div');
-    c.className = 'chip'; c.textContent = m;
-    c.onclick = () => {
-      mc.querySelectorAll('.chip').forEach(x => x.classList.remove('selected'));
-      c.classList.add('selected');
-      selectedModule = m;
-      checkReady();
-    };
-    mc.appendChild(c);
-  });
+function selectGoLive(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  if (opt && opt.value) {
+    selectedGoLive   = opt.textContent;
+    selectedGoLiveId = opt.value;
+    checkReady();
+  }
 }
 
-function renderDepts() {
-  const dc = document.getElementById('deptChips');
-  dc.innerHTML = '';
-  ALL_DEPTS.forEach(d => {
-    const c = document.createElement('div');
-    c.className = 'chip'; c.textContent = d;
-    c.onclick = () => {
-      dc.querySelectorAll('.chip').forEach(x => x.classList.remove('selected'));
-      c.classList.add('selected');
-      selectedDept = d;
-      checkReady();
-    };
-    dc.appendChild(c);
-  });
+function selectModule(el, name) {
+  document.querySelectorAll('#moduleChips .chip').forEach(x => x.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedModule = name;
+  checkReady();
+}
+
+function selectDept(el, name) {
+  document.querySelectorAll('#deptChips .chip').forEach(x => x.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedDept = name;
+  checkReady();
 }
 
 function checkReady() {

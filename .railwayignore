@@ -1,0 +1,9 @@
+backend/node_modules
+backend/uploads
+backend/data
+backend/vector-store
+backend/server.log
+backend/server-err.log
+backend/server.err
+node_modules
+.env
