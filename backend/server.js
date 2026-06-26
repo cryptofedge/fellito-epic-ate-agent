@@ -400,7 +400,7 @@ app.post('/api/scan-phi', requireAuth, upload.single('file'), async (req, res) =
     fs.unlink(req.file.path, () => {});
 
     const result = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 300,
       messages: [{
         role: 'user',
@@ -451,7 +451,7 @@ app.post('/api/upload', requireAuth, upload.single('file'), async (req, res) => 
       const mediaType = ext === '.png' ? 'image/png' : ext === '.gif' ? 'image/gif' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
 
       const visionRes = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 1200,
         messages: [{
           role: 'user',
@@ -1768,7 +1768,7 @@ async function sendMessage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model: 'claude-haiku-4-5-20251001',
         messages: chatHistory.slice(-16),
         max_tokens: 512,
         moduleTag: selectedModule,
