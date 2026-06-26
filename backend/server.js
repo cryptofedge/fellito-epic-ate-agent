@@ -1936,19 +1936,18 @@ function renderBoardCol(colId, issues, nextStatuses) {
     const card = document.createElement('div');
     card.style.cssText = 'background:#0A0A0F;border:1px solid #1E1E2E;border-radius:10px;padding:10px 12px;';
 
-    const btnHtml = nextStatuses.map(s => {
+    const btnHtml = nextStatuses.map(function(s) {
       const label = s === 'in-progress' ? '▶ Start' : s === 'resolved' ? '✓ Resolve' : '↩ Reopen';
       const color = s === 'resolved' ? '#00FF88' : s === 'in-progress' ? '#FFB800' : '#8A8AA0';
-      return `<button onclick="moveIssue('${issue.id}','${s}')" style="background:none;border:1px solid ${color};border-radius:8px;color:${color};font-size:10px;font-weight:700;padding:3px 8px;cursor:pointer;">${label}</button>`;
+      return '<button onclick="moveIssue(\'' + issue.id + '\',\'' + s + '\')" style="background:none;border:1px solid ' + color + ';border-radius:8px;color:' + color + ';font-size:10px;font-weight:700;padding:3px 8px;cursor:pointer;">' + label + '</button>';
     }).join('');
 
-    card.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
-        <div style="font-size:13px;color:#fff;font-weight:600;line-height:1.4;">${issue.title}</div>
-        <span style="flex-shrink:0;background:${sevColor}22;color:${sevColor};font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;">${issue.severity||'med'}</span>
-      </div>
-      <div style="font-size:11px;color:#8A8AA0;margin-bottom:8px;">${issue.module||''}${issue.department ? ' · ' + issue.department : ''}</div>
-      <div style="display:flex;gap:6px;">${btnHtml}</div>`;
+    card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">'
+      + '<div style="font-size:13px;color:#fff;font-weight:600;line-height:1.4;">' + issue.title + '</div>'
+      + '<span style="flex-shrink:0;background:' + sevColor + '22;color:' + sevColor + ';font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;">' + (issue.severity||'med') + '</span>'
+      + '</div>'
+      + '<div style="font-size:11px;color:#8A8AA0;margin-bottom:8px;">' + (issue.module||'') + (issue.department ? ' · ' + issue.department : '') + '</div>'
+      + '<div style="display:flex;gap:6px;">' + btnHtml + '</div>';
     col.appendChild(card);
   });
 }
