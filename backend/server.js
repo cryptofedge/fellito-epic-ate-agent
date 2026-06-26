@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v23';
+const CACHE = 'fellito-v25';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -972,6 +972,10 @@ html,body{height:100%;height:100dvh;background:#050508;color:#fff;font-family:-a
 /* chat screen */
 .messages{flex:1;overflow-y:auto;min-height:0;padding:16px 12px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;}
 .messages::-webkit-scrollbar{width:0;}
+/* Quick-action rows: always single line, swipe sideways, never wrap or clip */
+.quick-row{display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:6px 12px 0;}
+.quick-row::-webkit-scrollbar{display:none;}
+.quick-row button{flex-shrink:0;white-space:nowrap;}
 .bubble{max-width:82%;padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.5;word-break:break-word;}
 .bubble.user{background:#00E5FF;color:#000;font-weight:600;border-bottom-right-radius:4px;align-self:flex-end;}
 .bubble.assistant{background:#1E1E2E;color:#fff;border-bottom-left-radius:4px;align-self:flex-start;border:1px solid #2A2A3E;}
@@ -1228,7 +1232,7 @@ textarea::placeholder{color:#8A8AA0;}
     </div>
     <div class="messages" id="messages"></div>
     <div class="chat-footer">
-    <div style="padding:6px 12px 0;display:flex;gap:8px;flex-wrap:wrap;">
+    <div class="quick-row">
       <button onclick="triggerDowntime()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#FFB800;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">⏳ Downtime</button>
       <button onclick="escalateIssue()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#FF3B5C;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">🚨 Escalate</button>
       <button onclick="openBoard()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#A78BFA;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">📊 Board</button>
