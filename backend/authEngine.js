@@ -84,7 +84,7 @@ async function login(email, password, deviceId) {
 
   return {
     token,
-    user: { id: user.id, email: user.email, name: user.name, role: user.role, assignedGoLives: user.assignedGoLives },
+    user: { id: user.id, email: user.email, name: user.name, role: user.role, assignedGoLives: user.assignedGoLives, mustChangePassword: !!user.mustChangePassword },
   };
 }
 
@@ -156,6 +156,24 @@ function getUserById(userId) {
   return loadUsers().find((u) => u.id === userId);
 }
 
+async function changePassword(userId, newPassword) {
+  const users = loadUsers();
+  const idx = users.findIndex((u) => u.id === userId);
+  if (idx === -1) throw new Error('User not found');
+  users[idx].passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  users[idx].mustChangePassword = false;
+  saveUsers(users);
+}
+
+async function setTempPassword(email, tempPassword) {
+  const users = loadUsers();
+  const idx = users.findIndex((u) => u.email.toLowerCase() === email.toLowerCase());
+  if (idx === -1) throw new Error('User not found');
+  users[idx].passwordHash = await bcrypt.hash(tempPassword, SALT_ROUNDS);
+  users[idx].mustChangePassword = true;
+  saveUsers(users);
+}
+
 module.exports = {
   bootstrapOwner,
   login,
@@ -166,4 +184,6 @@ module.exports = {
   updateTeamMember,
   deleteTeamMember,
   getUserById,
+  changePassword,
+  setTempPassword,
 };

@@ -116,6 +116,30 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+app.post('/api/auth/change-password', requireAuth, async (req, res) => {
+  const { newPassword } = req.body;
+  if (!newPassword || newPassword.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  try {
+    const { changePassword } = require('./authEngine');
+    await changePassword(req.user.id, newPassword);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/set-temp-password', requireOwner, async (req, res) => {
+  const { email, tempPassword } = req.body;
+  if (!email || !tempPassword) return res.status(400).json({ error: 'email and tempPassword required' });
+  try {
+    const { setTempPassword } = require('./authEngine');
+    await setTempPassword(email, tempPassword);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 app.post('/api/auth/forgot-password', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email required' });
@@ -1973,6 +1997,15 @@ input:focus{border-color:#00E5FF;}
     <div class="err" id="loginErr"></div>
   </div>
 
+  <!-- CHANGE PASSWORD (forced on first login) -->
+  <div class="view" id="viewChangePass">
+    <div style="color:#00E5FF;font-size:13px;font-weight:700;text-align:center;margin-bottom:12px;">Create your new password</div>
+    <input id="newPass1" type="password" placeholder="New password (min 8 chars)" autocomplete="new-password">
+    <input id="newPass2" type="password" placeholder="Confirm new password" autocomplete="new-password">
+    <button class="btn-primary" onclick="doChangePass()">Set Password →</button>
+    <div class="err" id="changePassErr"></div>
+  </div>
+
   <!-- FORGOT PASSWORD -->
   <div class="view" id="viewForgot">
     <input id="forgotEmail" type="email" placeholder="Enter your email" autocomplete="email">
@@ -2018,6 +2051,7 @@ async function doLogin() {
     if (!res.ok) { err.textContent = data.error || 'Login failed.'; err.style.display = 'block'; return; }
     localStorage.setItem('_ft', data.token);
     localStorage.setItem('_fu', JSON.stringify(data.user));
+    if (data.user.mustChangePassword) { show('viewChangePass'); return; }
     window.location.href = '/app/chat';
   } catch { err.textContent = 'Connection issue — try again.'; err.style.display = 'block'; }
 }
@@ -2037,6 +2071,22 @@ async function doRegister() {
     if (!res.ok) { err.textContent = data.error || 'Registration failed.'; err.style.display = 'block'; return; }
     ok.textContent = 'Account created! You can now log in.'; ok.style.display = 'block';
     setTimeout(() => show('viewLogin'), 1800);
+  } catch { err.textContent = 'Connection issue — try again.'; err.style.display = 'block'; }
+}
+
+async function doChangePass() {
+  const p1  = document.getElementById('newPass1').value;
+  const p2  = document.getElementById('newPass2').value;
+  const err = document.getElementById('changePassErr');
+  err.style.display = 'none';
+  if (p1.length < 8) { err.textContent = 'Password must be at least 8 characters.'; err.style.display = 'block'; return; }
+  if (p1 !== p2)     { err.textContent = 'Passwords do not match.'; err.style.display = 'block'; return; }
+  try {
+    const token = localStorage.getItem('_ft');
+    const res   = await fetch('/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ newPassword: p1 }) });
+    const data  = await res.json();
+    if (!res.ok) { err.textContent = data.error || 'Failed to update password.'; err.style.display = 'block'; return; }
+    window.location.href = '/app/chat';
   } catch { err.textContent = 'Connection issue — try again.'; err.style.display = 'block'; }
 }
 
