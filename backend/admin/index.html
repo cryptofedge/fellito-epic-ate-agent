@@ -560,7 +560,36 @@
 
       <div id="discover-alert" class="alert"></div>
       <div id="discover-loading" style="display:none;text-align:center;padding:40px;color:#8A8AA0;font-size:14px;">🔍 Searching...</div>
+
+      <!-- Send All bar — shown after results load -->
+      <div id="discover-send-all-bar" style="display:none;background:#0A0A0F;border:1px solid #2A2A3E;border-radius:14px;padding:14px 18px;margin-bottom:16px;display:none;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <span style="font-size:13px;color:#8A8AA0;" id="discover-send-all-label">0 results found</span>
+        <button class="btn btn-orange" style="font-size:12px;padding:7px 18px;" onclick="openSendModal(null, true)">📧 Send All to...</button>
+      </div>
+
       <div id="discover-results" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;"></div>
+    </div>
+
+    <!-- ── SEND GO-LIVE OPPORTUNITY MODAL ── -->
+    <div id="send-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;">
+      <div style="background:#0D0D1A;border:1px solid #2A2A3E;border-radius:20px;padding:32px;width:480px;max-height:80vh;overflow-y:auto;">
+        <div style="font-size:18px;font-weight:700;color:#F0F0FF;margin-bottom:4px;">📧 Send Go-Live Opportunity</div>
+        <div style="font-size:13px;color:#8A8AA0;margin-bottom:6px;" id="send-modal-sub"></div>
+        <div id="send-modal-preview" style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:10px;padding:10px 14px;font-size:12px;color:#8A8AA0;margin-bottom:18px;max-height:120px;overflow-y:auto;"></div>
+        <div style="font-size:12px;font-weight:700;color:#8A8AA0;letter-spacing:1px;margin-bottom:10px;">SELECT RECIPIENTS</div>
+        <div style="margin-bottom:6px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#00E5FF;font-weight:600;">
+            <input type="checkbox" id="send-select-all" onchange="toggleSendAll(this)" style="accent-color:#00E5FF;width:15px;height:15px;" />
+            Select All
+          </label>
+        </div>
+        <div id="send-user-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;"></div>
+        <div id="send-modal-status" style="font-size:12px;color:#8A8AA0;min-height:18px;margin-bottom:12px;"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button class="btn btn-ghost" onclick="closeSendModal()">Cancel</button>
+          <button class="btn btn-orange" id="send-modal-btn" onclick="executeSend()">📧 Send</button>
+        </div>
+      </div>
     </div>
 
     <!-- ── ASSIGN USERS MODAL (for discovered go-lives) ── -->
@@ -1719,6 +1748,12 @@
       if (data.error) throw new Error(data.error);
 
       discoverResults = data.results || [];
+
+      // Show/update Send All bar
+      const bar = document.getElementById('discover-send-all-bar');
+      document.getElementById('discover-send-all-label').textContent = discoverResults.length + ' result' + (discoverResults.length !== 1 ? 's' : '') + ' found';
+      bar.style.display = discoverResults.length ? 'flex' : 'none';
+
       badge.style.display = 'block';
       badge.textContent = data.webSearch
         ? '🌐 Results from live internet search'
@@ -1742,9 +1777,10 @@
           <div style="font-size:12px;color:#8A8AA0;">🏥 ${esc(modules)}</div>
           ${item.notes ? `<div style="font-size:12px;color:#8A8AA0;font-style:italic;">${esc(item.notes)}</div>` : ''}
           ${item.source && item.source.startsWith('http') ? `<a href="${esc(item.source)}" target="_blank" style="font-size:11px;color:#00E5FF;text-decoration:none;">🔗 Source</a>` : item.source ? `<div style="font-size:11px;color:#8A8AA0;">📰 ${esc(item.source)}</div>` : ''}
-          <div style="display:flex;gap:8px;margin-top:4px;">
+          <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
             <button class="btn btn-orange" style="font-size:12px;padding:6px 14px;" onclick="addDiscoveredGoLive(${i})">+ Add Go-Live</button>
             <button class="btn btn-ghost" style="font-size:12px;padding:6px 14px;" onclick="openAssignAfterAdd(${i})">+ Add &amp; Assign Team</button>
+            <button class="btn btn-ghost" style="font-size:12px;padding:6px 14px;border-color:#F5A623;color:#F5A623;" onclick="openSendModal(${i}, false)">📧 Send to...</button>
           </div>
         </div>`;
       }).join('');
@@ -1828,6 +1864,91 @@
     await renderTeam();
     if (errors.length) alert('Failed to update: ' + errors.join(', '));
     else showToast('Team assignments saved');
+  }
+
+  // ── SEND MODAL ────────────────────────────────────────────────────────────
+  let sendTarget = null; // null = send all, number = single card index
+
+  async function openSendModal(idx, sendAll) {
+    sendTarget = sendAll ? null : idx;
+    const opps = sendAll ? discoverResults : [discoverResults[idx]];
+    if (!opps.length) return;
+
+    // Ensure team is loaded
+    if (!teamMembers.length) await renderTeam();
+
+    const sub = sendAll
+      ? `Sending all ${opps.length} results`
+      : `Sending: ${opps[0].hospital} — ${opps[0].city || ''}, ${opps[0].state || ''}`;
+    document.getElementById('send-modal-sub').textContent = sub;
+
+    // Preview block
+    document.getElementById('send-modal-preview').innerHTML = opps.map(o =>
+      `<div style="margin-bottom:6px;"><strong style="color:#F0F0FF;">${esc(o.hospital)}</strong> · ${esc(o.city||'')}, ${esc(o.state||'')} · ${esc(o.expectedDate||'TBD')}</div>`
+    ).join('');
+
+    // User checkboxes
+    document.getElementById('send-select-all').checked = false;
+    const nonOwners = teamMembers.filter(u => u.email);
+    document.getElementById('send-user-list').innerHTML = nonOwners.length
+      ? nonOwners.map(u => `
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;background:#0D0D1A;border:1px solid #1E1E2E;border-radius:10px;padding:10px 14px;">
+            <input type="checkbox" class="send-recipient" data-uid="${esc(u.id)}" style="accent-color:#F5A623;width:16px;height:16px;" />
+            <div>
+              <div style="font-size:13px;font-weight:600;color:#F0F0FF;">${esc(u.name)}</div>
+              <div style="font-size:11px;color:#8A8AA0;">${esc(u.email)} · ${esc(u.role)}</div>
+            </div>
+          </label>`).join('')
+      : '<div style="color:#8A8AA0;font-size:13px;">No team members with emails. Add some from the Team tab.</div>';
+
+    document.getElementById('send-modal-status').textContent = '';
+    document.getElementById('send-modal-btn').disabled = false;
+    document.getElementById('send-modal-btn').textContent = '📧 Send';
+    document.getElementById('send-modal').style.display = 'flex';
+  }
+
+  function toggleSendAll(cb) {
+    document.querySelectorAll('.send-recipient').forEach(c => c.checked = cb.checked);
+  }
+
+  function closeSendModal() {
+    document.getElementById('send-modal').style.display = 'none';
+    sendTarget = null;
+  }
+
+  async function executeSend() {
+    const checked = Array.from(document.querySelectorAll('.send-recipient:checked'));
+    if (!checked.length) { document.getElementById('send-modal-status').textContent = '⚠️ Select at least one recipient.'; return; }
+
+    const userIds = checked.map(c => c.dataset.uid);
+    const opps = sendTarget === null ? discoverResults : [discoverResults[sendTarget]];
+    const btn = document.getElementById('send-modal-btn');
+    const status = document.getElementById('send-modal-status');
+
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    status.textContent = '';
+
+    try {
+      const result = await api('POST', '/api/admin/send-golive-opportunity', { userIds, opportunities: opps });
+      const sentNames = result.sent || [];
+      const failed = result.failed || [];
+      status.style.color = failed.length ? '#F5A623' : '#00E5FF';
+      status.textContent = sentNames.length ? `✅ Sent to: ${sentNames.join(', ')}` + (failed.length ? ` · ⚠️ Failed: ${failed.map(f=>f.name).join(', ')}` : '') : `⚠️ All failed: ${failed.map(f=>f.name+' ('+f.error+')').join('; ')}`;
+      if (sentNames.length) {
+        btn.textContent = '✅ Done';
+        setTimeout(closeSendModal, 2000);
+        showToast(`📧 Sent to ${sentNames.length} recipient${sentNames.length > 1 ? 's' : ''}`);
+      } else {
+        btn.disabled = false;
+        btn.textContent = '📧 Send';
+      }
+    } catch (e) {
+      status.style.color = '#FF3B5C';
+      status.textContent = '❌ ' + e.message;
+      btn.disabled = false;
+      btn.textContent = '📧 Send';
+    }
   }
 
   function showToast(msg) {

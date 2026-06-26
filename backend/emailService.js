@@ -168,4 +168,71 @@ async function sendShiftEmail({ toEmail, consultant, goLive, dept, module: mod, 
   });
 }
 
-module.exports = { sendInviteEmail, sendShiftEmail };
+async function sendGoLiveOpportunityEmail({ toEmail, toName, opportunities, sentBy }) {
+  const transporter = getTransporter();
+  if (!transporter) throw new Error('Email not configured. Add GMAIL_USER and GMAIL_APP_PASSWORD.');
+
+  const confColor = c => c === 'high' ? '#00E5FF' : c === 'medium' ? '#F5A623' : '#8A8AA0';
+
+  const cards = opportunities.map(o => {
+    const modules = (o.modules || []).join(', ') || 'TBD';
+    const conf = (o.confidence || 'low').toUpperCase();
+    const color = confColor(o.confidence);
+    return `
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:14px;overflow:hidden;margin-bottom:14px;">
+      <tr><td style="padding:16px 20px;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="color:#F0F0FF;font-size:15px;font-weight:700;">${o.hospital}</td>
+          <td align="right"><span style="font-size:10px;font-weight:700;color:${color};border:1px solid ${color};border-radius:20px;padding:2px 8px;">${conf}</span></td>
+        </tr></table>
+        <div style="color:#8A8AA0;font-size:12px;margin-top:8px;">📍 ${o.city || ''}${o.city && o.state ? ', ' : ''}${o.state || 'US'}</div>
+        <div style="color:#8A8AA0;font-size:12px;margin-top:4px;">📅 ${o.expectedDate || 'TBD'}</div>
+        <div style="color:#8A8AA0;font-size:12px;margin-top:4px;">🏥 ${modules}</div>
+        ${o.notes ? `<div style="color:#8A8AA0;font-size:12px;font-style:italic;margin-top:6px;">${o.notes}</div>` : ''}
+        ${o.source && !o.source.startsWith('http') ? `<div style="color:#8A8AA0;font-size:11px;margin-top:4px;">📰 ${o.source}</div>` : ''}
+      </td></tr>
+    </table>`;
+  }).join('');
+
+  const plural = opportunities.length > 1 ? `${opportunities.length} Go-Live Opportunities` : 'a Go-Live Opportunity';
+
+  await transporter.sendMail({
+    from: `"FELLITO · Eclat Universe" <${process.env.GMAIL_USER}>`,
+    to: toEmail,
+    subject: `FELLITO — ${plural} for You`,
+    html: `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0A0A0F;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0F;padding:40px 20px;">
+<tr><td align="center">
+<table width="100%" style="max-width:520px;">
+
+  <!-- Header -->
+  <tr><td style="background:linear-gradient(135deg,#001A2C,#002A40);padding:32px;text-align:center;border-radius:20px 20px 0 0;border:1px solid #1E1E2E;border-bottom:none;">
+    <div style="font-size:32px;font-weight:900;color:#00E5FF;letter-spacing:6px;margin-bottom:4px;">FELLITO</div>
+    <div style="font-size:11px;color:#8A8AA0;letter-spacing:3px;">ECLAT UNIVERSE · EPIC GO-LIVE INTELLIGENCE</div>
+  </td></tr>
+
+  <!-- Body -->
+  <tr><td style="background:#12121A;border:1px solid #1E1E2E;border-top:none;border-bottom:none;padding:28px 28px 8px;">
+    <p style="color:#fff;font-size:16px;font-weight:600;margin:0 0 6px;">Hey ${toName || toEmail},</p>
+    <p style="color:#8A8AA0;font-size:13px;line-height:1.6;margin:0 0 24px;">
+      ${sentBy ? `<strong style="color:#fff;">${sentBy}</strong> sent you` : 'Here are'} ${plural} that may be a great fit for your skills. Review the details below.
+    </p>
+    ${cards}
+    <p style="color:#8A8AA0;font-size:12px;line-height:1.6;margin:16px 0 8px;">
+      Log in to FELLITO to apply for any of these opportunities or reach out to your project manager directly.
+    </p>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="background:#0A0A0F;padding:18px 28px;text-align:center;border:1px solid #1E1E2E;border-top:none;border-radius:0 0 20px 20px;">
+    <p style="color:#8A8AA0;font-size:11px;margin:0;letter-spacing:1px;">POWERED BY ECLAT UNIVERSE · DO NOT REPLY TO THIS EMAIL</p>
+  </td></tr>
+
+</table>
+</td></tr></table>
+</body></html>`,
+  });
+}
+
+module.exports = { sendInviteEmail, sendShiftEmail, sendGoLiveOpportunityEmail };

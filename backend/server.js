@@ -16,7 +16,7 @@ const { listAdoption, upsertAdoption, deleteAdoptionRecord } = require('./adopti
 const { listLinks, ingestLink, deleteLink } = require('./linksEngine');
 const { updateMemory, buildMemoryContext, addInsight, listAllMemory, closeSession } = require('./memoryEngine');
 const { createTempLink, listTempLinks, openLink, revokeTempLink, validateTempSession, SESSION_TTL_MS } = require('./tempLinkStore');
-const { sendInviteEmail, sendShiftEmail } = require('./emailService');
+const { sendInviteEmail, sendShiftEmail, sendGoLiveOpportunityEmail } = require('./emailService');
 const cookieParser = require('cookie-parser');
 const { signToken } = require('./authEngine');
 const { DATA_DIR, UPLOAD_DIR } = require('./storagePaths');
@@ -61,7 +61,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v40';
+const CACHE = 'fellito-v41';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -262,6 +262,31 @@ app.get('/api/admin/discover', requireOwner, async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// ─── Send go-live opportunity emails ─────────────────────────────────────────
+app.post('/api/admin/send-golive-opportunity', requireOwner, async (req, res) => {
+  const { userIds, opportunities } = req.body;
+  if (!Array.isArray(userIds) || !userIds.length) return res.status(400).json({ error: 'userIds required' });
+  if (!Array.isArray(opportunities) || !opportunities.length) return res.status(400).json({ error: 'opportunities required' });
+
+  const team = listTeam();
+  const targets = team.filter(u => userIds.includes(u.id));
+  if (!targets.length) return res.status(400).json({ error: 'No valid users found' });
+
+  const sentBy = req.user.name || req.user.email;
+  const results = { sent: [], failed: [] };
+
+  await Promise.allSettled(targets.map(async u => {
+    try {
+      await sendGoLiveOpportunityEmail({ toEmail: u.email, toName: u.name, opportunities, sentBy });
+      results.sent.push(u.name || u.email);
+    } catch (e) {
+      results.failed.push({ name: u.name || u.email, error: e.message });
+    }
+  }));
+
+  res.json(results);
 });
 
 // ─── Assign go-lives to a team member ────────────────────────────────────────
