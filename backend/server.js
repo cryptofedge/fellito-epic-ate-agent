@@ -827,8 +827,6 @@ html,body{height:100%;height:100dvh;background:#050508;color:#fff;font-family:-a
 .header-info{flex:1;min-width:0;}
 .header-name{font-size:15px;font-weight:800;color:#00E5FF;letter-spacing:1px;}
 .header-sub{font-size:10px;color:#8A8AA0;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.timer-pill{display:none;}
-.timer-text{display:none;}
 
 /* ── SCREENS ── */
 .screen{display:none;flex:1;flex-direction:column;min-height:0;}
@@ -916,10 +914,6 @@ textarea::placeholder{color:#8A8AA0;}
       <button onclick="openNearby()" title="What's nearby?" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:20px;color:#00E5FF;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:5px;">
         📍 Nearby
       </button>
-      <div class="timer-pill">
-        <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4.5" stroke="#FFB800" stroke-width="1" fill="none"/><path d="M5 2.5V5l1.5 1.5" stroke="#FFB800" stroke-width="1" stroke-linecap="round"/></svg>
-        <span class="timer-text" id="countdown">10:00</span>
-      </div>
     </div>
   </div>
 
@@ -1039,18 +1033,12 @@ textarea::placeholder{color:#8A8AA0;}
   </div>
 
 
-  <div class="expired-overlay" id="expiredOverlay">
-    <div style="font-size:48px;">⛔</div>
-    <div style="font-size:20px;font-weight:900;color:#FF3B5C;">Session Expired</div>
-    <div style="font-size:13px;color:#8A8AA0;line-height:1.6;">Your 10-minute access window has ended.<br><br>Contact your administrator for a new invite link.</div>
-  </div>
 
 </div></div>
 
 <script>
 const TOKEN = '${jwtToken}' === '__PERM__' ? (localStorage.getItem('_ft') || '') : '${jwtToken}';
 if ('${jwtToken}' === '__PERM__' && !TOKEN) { window.location.href = '/app'; }
-const SESSION_EXPIRES_AT = ${link.sessionExpiresAt ?? 0};
 const GOLIVE_ID = '${link.goLiveId || ''}';
 const USER_NAME = '${name}';
 const ALL_MODULES  = ${JSON.stringify(ALL_MODULES)};
@@ -1061,7 +1049,6 @@ let selectedGoLiveId = GOLIVE_ID || '';
 let selectedModule = '';
 let selectedDept   = '';
 let chatHistory    = [];
-let expired        = false;
 
 // ── Clock ──────────────────────────────────────────────────────────────────
 function updateClock() {
@@ -1088,32 +1075,7 @@ function closeSessionOnServer() {
 window.addEventListener('pagehide', closeSessionOnServer);
 window.addEventListener('beforeunload', closeSessionOnServer);
 
-// ── Countdown ──────────────────────────────────────────────────────────────
-const IS_PERM = SESSION_EXPIRES_AT === 0;
-if (IS_PERM) {
-  const pill = document.querySelector('.timer-pill');
-  if (pill) pill.style.display = 'none';
-}
-function updateTimer() {
-  if (IS_PERM) return;
-  const ms = SESSION_EXPIRES_AT - Date.now();
-  if (ms <= 0) { expire(); return; }
-  const m = Math.floor(ms / 60000);
-  const s = Math.floor((ms % 60000) / 1000).toString().padStart(2,'0');
-  document.getElementById('countdown').textContent = m + ':' + s;
-  const pill = document.querySelector('.timer-pill');
-  const txt  = document.getElementById('countdown');
-  if (ms < 120000)      { pill.style.borderColor='#FF3B5C'; pill.style.background='rgba(255,59,92,.15)'; txt.style.color='#FF3B5C'; }
-  else if (ms < 300000) { pill.style.borderColor='#00E5FF'; pill.style.background='rgba(255,140,0,.15)'; txt.style.color='#00E5FF'; }
-}
-updateTimer(); setInterval(updateTimer, 1000);
 
-function expire() {
-  if (expired) return; expired = true;
-  document.getElementById('expiredOverlay').classList.add('show');
-  document.getElementById('sendBtn').disabled = true;
-  document.getElementById('input').disabled   = true;
-}
 
 // ── Load Go-Live info + render all selection chips ─────────────────────────
 // All selections are pre-rendered server-side — these are just event handlers
@@ -1793,9 +1755,7 @@ ta.addEventListener('input', () => { ta.style.height='auto'; ta.style.height=Mat
 ta.addEventListener('keydown', e => { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
 
 async function sendMessage() {
-  if (expired) return;
   const text = ta.value.trim(); if (!text) return;
-  if (!IS_PERM && SESSION_EXPIRES_AT > 0 && Date.now() >= SESSION_EXPIRES_AT) { expire(); return; }
 
   ta.value = ''; ta.style.height = 'auto';
   document.getElementById('sendBtn').disabled = true;
@@ -1818,7 +1778,7 @@ async function sendMessage() {
       }),
     });
     hideTyping();
-    if (res.status === 401) { expire(); return; }
+    if (res.status === 401) { window.location.href = '/app'; return; }
 
     // Read streaming SSE response
     const reader = res.body.getReader();
@@ -2083,7 +2043,7 @@ button:hover{opacity:.9;}
   <div class="err" id="err">Invalid link. Check your invite email and try again.</div>
 
   <hr class="divider"/>
-  <div class="hint">Don't have a link? Contact your Go-Live admin to receive an invite.<br/><br/>Sessions are device-locked and expire after 10 minutes.</div>
+  <div class="hint">Don't have a link? Contact your Go-Live admin to receive an invite.</div>
 </div>
 <script>
   // Auto-redirect if a token is in the URL path already
