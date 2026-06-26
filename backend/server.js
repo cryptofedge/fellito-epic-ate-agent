@@ -61,7 +61,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v33';
+const CACHE = 'fellito-v34';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -1646,7 +1646,7 @@ const MODULE_BRIEFS = {
 const OFFLINE_CACHE_KEY = 'fellito_offline_';
 
 function offlineCacheKey(module) {
-  return OFFLINE_CACHE_KEY + (module || 'general').replace(/\s+/g, '_').toLowerCase();
+  return OFFLINE_CACHE_KEY + (module || 'general').replace(/[ ]+/g, '_').toLowerCase();
 }
 
 async function seedOfflineCache(module, dept, goLiveId) {
@@ -1675,7 +1675,7 @@ function queryOfflineCache(question, module) {
   try { cached = JSON.parse(localStorage.getItem(key)); } catch { return null; }
   if (!cached?.pairs?.length) return null;
 
-  const qWords = question.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+  const qWords = question.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/ +/).filter(w => w.length > 2);
   if (!qWords.length) return null;
 
   let best = null, bestScore = 0;
@@ -2702,11 +2702,11 @@ async function sendMessage() {
     const lastQ = chatHistory.filter(m => m.role === 'user').slice(-1)[0]?.content || '';
     const hit = queryOfflineCache(lastQ, selectedModule);
     if (hit) {
-      const reply = '📵 Offline mode — answering from cached knowledge:\n\n' + hit.a;
+      const reply = '📵 Offline mode — answering from cached knowledge:\\n\\n' + hit.a;
       addBubble('assistant', reply);
       chatHistory.push({ role: 'assistant', content: reply });
     } else {
-      addBubble('assistant', '📵 You appear to be offline. Reconnect to ask FELLITO.\n\nIf this Go-Live was opened before, try asking a more specific question — some answers may be cached.');
+      addBubble('assistant', '📵 You appear to be offline. Reconnect to ask FELLITO.\\n\\nIf this Go-Live was opened before, try asking a more specific question — some answers may be cached.');
     }
   }
   document.getElementById('sendBtn').disabled = false;
