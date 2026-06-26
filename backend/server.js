@@ -597,7 +597,7 @@ app.post('/api/tts', requireAuth, async (req, res) => {
 });
 
 // ─── ElevenLabs Voice Sample — add recording to improve voice clone ───────────
-app.post('/api/voice-sample', requireAuth, upload.single('audio'), async (req, res) => {
+app.post('/api/voice-sample', requireOwner, upload.single('audio'), async (req, res) => {
   const apiKey  = process.env.ELEVENLABS_API_KEY;
   const voiceId = process.env.ELEVENLABS_VOICE_ID;
   if (!apiKey || !voiceId) return res.status(503).json({ error: 'ElevenLabs not configured' });
@@ -1045,13 +1045,15 @@ textarea::placeholder{color:#8A8AA0;}
       <div style="font-size:16px;font-weight:900;color:#00E5FF;letter-spacing:1px;">SETTINGS</div>
       <button onclick="toggleSettings()" style="background:none;border:none;color:#8A8AA0;font-size:22px;cursor:pointer;">✕</button>
     </div>
-    <div style="font-size:11px;color:#8A8AA0;font-weight:700;letter-spacing:2px;margin-bottom:4px;">VOICE CLONE</div>
-    <div style="font-size:13px;color:#ccc;line-height:1.6;margin-bottom:8px;">Record your voice and send it straight to ElevenLabs. The more samples you add, the more FELLITO sounds exactly like you.</div>
-    <button id="recordVoiceBtn" onclick="toggleVoiceRecord()" style="background:#1E1E2E;border:1px solid #00E5FF;border-radius:20px;color:#00E5FF;font-size:13px;font-weight:700;padding:12px 20px;cursor:pointer;display:flex;align-items:center;gap:8px;width:100%;justify-content:center;">
-      🎙️ <span id="recordVoiceLbl">Record Voice Sample</span>
-    </button>
-    <div id="recordVoiceStatus" style="font-size:12px;color:#8A8AA0;text-align:center;min-height:18px;"></div>
-    <div style="font-size:11px;color:#555;text-align:center;">Talk naturally for 30–60 sec — tap Stop when done</div>
+    <div id="voiceCloneSection" style="display:none;">
+      <div style="font-size:11px;color:#8A8AA0;font-weight:700;letter-spacing:2px;margin-bottom:4px;">VOICE CLONE</div>
+      <div style="font-size:13px;color:#ccc;line-height:1.6;margin-bottom:8px;">Record your voice and send it straight to ElevenLabs. The more samples you add, the more FELLITO sounds exactly like you.</div>
+      <button id="recordVoiceBtn" onclick="toggleVoiceRecord()" style="background:#1E1E2E;border:1px solid #00E5FF;border-radius:20px;color:#00E5FF;font-size:13px;font-weight:700;padding:12px 20px;cursor:pointer;display:flex;align-items:center;gap:8px;width:100%;justify-content:center;">
+        🎙️ <span id="recordVoiceLbl">Record Voice Sample</span>
+      </button>
+      <div id="recordVoiceStatus" style="font-size:12px;color:#8A8AA0;text-align:center;min-height:18px;"></div>
+      <div style="font-size:11px;color:#555;text-align:center;">Talk naturally for 30–60 sec — tap Stop when done</div>
+    </div>
   </div>
 
   <!-- Expired overlay -->
@@ -1071,6 +1073,9 @@ textarea::placeholder{color:#8A8AA0;}
 <script>
 const TOKEN = '${jwtToken}' === '__PERM__' ? (localStorage.getItem('_ft') || '') : '${jwtToken}';
 if ('${jwtToken}' === '__PERM__' && !TOKEN) { window.location.href = '/app'; }
+function _jwtRole(t) { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).role; } catch { return ''; } }
+const IS_OWNER = _jwtRole(TOKEN) === 'owner';
+if (IS_OWNER) { const s = document.getElementById('voiceCloneSection'); if (s) s.style.display = 'block'; }
 const GOLIVE_ID = '${link.goLiveId || ''}';
 const USER_NAME = '${name}';
 const ALL_MODULES  = ${JSON.stringify(ALL_MODULES)};
