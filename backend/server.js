@@ -61,7 +61,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v38';
+const CACHE = 'fellito-v39';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -253,8 +253,11 @@ app.get('/api/admin/discover', requireOwner, async (req, res) => {
       max_tokens: 1800,
       messages: [{ role: 'user', content: prompt }],
     });
-    const raw = msg.content[0].text.trim().replace(/^```json\s*/,'').replace(/```\s*$/,'').trim();
-    const json = JSON.parse(raw);
+    const text = msg.content[0].text;
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start === -1 || end === -1) throw new Error('No JSON object in response');
+    const json = JSON.parse(text.slice(start, end + 1));
     res.json({ ...json, webSearch: !!webResults });
   } catch (e) {
     res.status(500).json({ error: e.message });
