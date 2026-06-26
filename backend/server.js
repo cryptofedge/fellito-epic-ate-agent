@@ -60,7 +60,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v27';
+const CACHE = 'fellito-v29';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -1023,8 +1023,9 @@ textarea::placeholder{color:#8A8AA0;}
   <div id="shiftModal" style="display:none;position:absolute;inset:0;background:#000000CC;z-index:200;overflow-y:auto;padding:24px 16px;">
     <div style="background:#12121A;border:1px solid #1E1E2E;border-radius:20px;padding:24px;max-width:400px;margin:0 auto;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <button onclick="document.getElementById('shiftModal').style.display='none'" style="background:none;border:1px solid #2A2A3E;border-radius:20px;color:#8A8AA0;font-size:12px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:5px;">← Back</button>
         <div style="font-size:15px;font-weight:900;color:#00FF88;letter-spacing:1px;">📋 END SHIFT</div>
-        <button onclick="document.getElementById('shiftModal').style.display='none'" style="background:none;border:none;color:#8A8AA0;font-size:20px;cursor:pointer;">×</button>
+        <div style="width:60px;"></div>
       </div>
 
       <!-- Stats preview -->
@@ -1144,8 +1145,9 @@ textarea::placeholder{color:#8A8AA0;}
   <div id="boardModal" style="display:none;position:absolute;inset:0;background:#000000CC;z-index:200;overflow-y:auto;padding:20px 14px;">
     <div style="background:#12121A;border:1px solid #1E1E2E;border-radius:20px;padding:22px;max-width:420px;margin:0 auto;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <button onclick="document.getElementById('boardModal').style.display='none'" style="background:none;border:1px solid #2A2A3E;border-radius:20px;color:#8A8AA0;font-size:12px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:5px;">← Back</button>
         <div style="font-size:15px;font-weight:900;color:#A78BFA;letter-spacing:1px;">📊 ISSUE BOARD</div>
-        <button onclick="document.getElementById('boardModal').style.display='none'" style="background:none;border:none;color:#8A8AA0;font-size:20px;cursor:pointer;line-height:1;">×</button>
+        <div style="width:60px;"></div>
       </div>
       <div id="boardGoLive" style="font-size:11px;color:#8A8AA0;letter-spacing:1px;margin-bottom:18px;"></div>
 
@@ -1189,8 +1191,9 @@ textarea::placeholder{color:#8A8AA0;}
 
       <!-- Header -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <button onclick="closeQuiz()" style="background:none;border:1px solid #2A2A3E;border-radius:20px;color:#8A8AA0;font-size:12px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:5px;">← Back</button>
         <div style="font-size:14px;font-weight:900;color:#00E5FF;letter-spacing:1px;">🎯 QUIZ ME</div>
-        <button onclick="closeQuiz()" style="background:none;border:none;color:#8A8AA0;font-size:20px;cursor:pointer;line-height:1;">×</button>
+        <div style="width:60px;"></div>
       </div>
       <div id="quizSubtitle" style="font-size:11px;color:#8A8AA0;letter-spacing:1px;margin-bottom:18px;"></div>
 
