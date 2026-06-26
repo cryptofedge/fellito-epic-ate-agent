@@ -1950,25 +1950,56 @@ html,body{height:100%;background:#050508;color:#fff;font-family:-apple-system,Bl
 .sub{font-size:11px;color:#8A8AA0;letter-spacing:3px;text-align:center;margin-bottom:40px;}
 input{width:100%;background:#12121A;border:1px solid #1E1E2E;border-radius:12px;padding:14px 16px;color:#fff;font-size:15px;margin-bottom:12px;outline:none;}
 input:focus{border-color:#00E5FF;}
-button{width:100%;background:#00E5FF;color:#000;font-size:15px;font-weight:800;border:none;border-radius:12px;padding:16px;cursor:pointer;letter-spacing:1px;margin-top:4px;}
+.btn-primary{width:100%;background:#00E5FF;color:#000;font-size:15px;font-weight:800;border:none;border-radius:12px;padding:16px;cursor:pointer;letter-spacing:1px;margin-top:4px;}
+.btn-secondary{width:100%;background:transparent;color:#00E5FF;font-size:14px;font-weight:600;border:1px solid #1E1E2E;border-radius:12px;padding:14px;cursor:pointer;margin-top:10px;}
+.btn-secondary:hover{border-color:#00E5FF;}
 .err{color:#FF4444;font-size:13px;text-align:center;margin-top:12px;display:none;}
+.ok{color:#00E5FF;font-size:13px;text-align:center;margin-top:12px;display:none;}
+.view{display:none;} .view.active{display:block;}
 </style>
 </head>
 <body>
 <div class="card">
   <div class="logo">FELLITO</div>
   <div class="sub">ECLAT UNIVERSE · EPIC ATE SUPPORT</div>
-  <input id="email" type="email" placeholder="Email" autocomplete="email">
-  <input id="pass" type="password" placeholder="Password" autocomplete="current-password">
-  <button onclick="doLogin()">Enter →</button>
-  <div class="err" id="err"></div>
+
+  <!-- LOGIN -->
+  <div class="view active" id="viewLogin">
+    <input id="email" type="email" placeholder="Email" autocomplete="email">
+    <input id="pass" type="password" placeholder="Password" autocomplete="current-password">
+    <button class="btn-primary" onclick="doLogin()">Enter →</button>
+    <button class="btn-secondary" onclick="show('viewRegister')">Create Account</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+
+  <!-- REGISTER -->
+  <div class="view" id="viewRegister">
+    <input id="regName"  type="text"     placeholder="Full Name">
+    <input id="regEmail" type="email"    placeholder="Email" autocomplete="email">
+    <input id="regPass"  type="password" placeholder="Password (min 8 chars)" autocomplete="new-password">
+    <button class="btn-primary" onclick="doRegister()">Create Account →</button>
+    <button class="btn-secondary" onclick="show('viewLogin')">Back to Login</button>
+    <div class="err" id="regErr"></div>
+    <div class="ok"  id="regOk"></div>
+  </div>
 </div>
 <script>
-document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+function show(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (document.getElementById('viewLogin').classList.contains('active')) doLogin();
+    else doRegister();
+  }
+});
+
 async function doLogin() {
   const email = document.getElementById('email').value.trim();
   const pass  = document.getElementById('pass').value;
-  const err   = document.getElementById('err');
+  const err   = document.getElementById('loginErr');
   err.style.display = 'none';
   if (!email || !pass) { err.textContent = 'Enter email and password.'; err.style.display = 'block'; return; }
   try {
@@ -1980,10 +2011,28 @@ async function doLogin() {
     window.location.href = '/app/chat';
   } catch { err.textContent = 'Connection issue — try again.'; err.style.display = 'block'; }
 }
+
+async function doRegister() {
+  const name  = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const pass  = document.getElementById('regPass').value;
+  const err   = document.getElementById('regErr');
+  const ok    = document.getElementById('regOk');
+  err.style.display = 'none'; ok.style.display = 'none';
+  if (!name || !email || !pass) { err.textContent = 'All fields required.'; err.style.display = 'block'; return; }
+  if (pass.length < 8) { err.textContent = 'Password must be at least 8 characters.'; err.style.display = 'block'; return; }
+  try {
+    const res  = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password: pass }) });
+    const data = await res.json();
+    if (!res.ok) { err.textContent = data.error || 'Registration failed.'; err.style.display = 'block'; return; }
+    ok.textContent = 'Account created! You can now log in.'; ok.style.display = 'block';
+    setTimeout(() => show('viewLogin'), 1800);
+  } catch { err.textContent = 'Connection issue — try again.'; err.style.display = 'block'; }
+}
+
 // Auto-redirect if already logged in
 const t = localStorage.getItem('_ft');
 if (t) window.location.href = '/app/chat';
-// Register service worker
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 </script>
 </body>
