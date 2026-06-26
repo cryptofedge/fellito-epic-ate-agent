@@ -1644,7 +1644,7 @@ function _internalToggleMic() {
 async function escalateIssue() {
   const lastExchange = chatHistory.slice(-4);
   if (!lastExchange.length) { addBubble('assistant', 'Nothing to escalate yet — ask me something first.'); return; }
-  const summary = lastExchange.map(m => (m.role === 'user' ? 'User: ' : 'FELLITO: ') + m.content).join('\n').slice(0, 400);
+  const summary = lastExchange.map(m => (m.role === 'user' ? 'User: ' : 'FELLITO: ') + m.content).join('\\n').slice(0, 400);
   const title = prompt('Describe the issue in one line:');
   if (!title) return;
   try {
@@ -1974,8 +1974,8 @@ input:focus{border-color:#00E5FF;}
 
   <!-- REGISTER -->
   <div class="view" id="viewRegister">
-    <input id="regName"  type="text"     placeholder="Full Name">
-    <input id="regEmail" type="email"    placeholder="Email" autocomplete="email">
+    <input id="regName"  type="text"     placeholder="Full Name" autocomplete="off">
+    <input id="regEmail" type="email"    placeholder="Email" autocomplete="off">
     <input id="regPass"  type="password" placeholder="Password (min 8 chars)" autocomplete="new-password">
     <button class="btn-primary" onclick="doRegister()">Create Account →</button>
     <button class="btn-secondary" onclick="show('viewLogin')">Back to Login</button>
