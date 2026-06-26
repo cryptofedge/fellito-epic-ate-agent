@@ -293,8 +293,13 @@ app.post('/api/chat', requireAuth, async (req, res) => {
     const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
     if (lastUserMsg) {
       const sessionId = goLiveId || userId || 'standby';
-      const ragContext = await queryDocuments(lastUserMsg.content, sessionId, 5, moduleTag || null);
-      if (ragContext) systemPrompt += '\n\nKNOWLEDGE BASE — use this if relevant:\n' + ragContext;
+      // Search both uploaded docs and globally learned Q&A pairs
+      const [ragContext, learnedContext] = await Promise.all([
+        queryDocuments(lastUserMsg.content, sessionId, 4, moduleTag || null),
+        queryDocuments(lastUserMsg.content, 'global-learned', 3, moduleTag || null),
+      ]);
+      if (ragContext)     systemPrompt += '\n\nKNOWLEDGE BASE — use this if relevant:\n' + ragContext;
+      if (learnedContext) systemPrompt += '\n\nPAST SESSION KNOWLEDGE — answers FELLITO has given before on similar questions:\n' + learnedContext;
     }
 
     const memContext = buildMemoryContext(userId);
@@ -322,6 +327,16 @@ app.post('/api/chat', requireAuth, async (req, res) => {
     const userName = req.user.name || req.user.email || null;
     if (lastUserMsg) updateMemory(userId, { role: 'user', content: lastUserMsg.content, module: moduleTag, dept, goLive, userName });
     if (fullReply)   updateMemory(userId, { role: 'assistant', content: fullReply, module: moduleTag, dept, goLive, userName });
+
+    // Self-learning: ingest every Q&A pair into the global knowledge base
+    if (lastUserMsg && fullReply && fullReply.length > 40) {
+      const learnedText = `Q: ${lastUserMsg.content.trim()}\nA: ${fullReply.trim()}`;
+      const tmpPath = require('os').tmpdir() + '/fellito-learned-' + Date.now() + '.txt';
+      require('fs').writeFileSync(tmpPath, learnedText, 'utf8');
+      ingestDocument(tmpPath, `learned_${moduleTag || 'general'}_${Date.now()}.txt`, 'global-learned', moduleTag || null)
+        .catch(() => {})
+        .finally(() => { try { require('fs').unlinkSync(tmpPath); } catch {} });
+    }
 
     if (lastUserMsg && moduleTag) {
       const q = lastUserMsg.content.toLowerCase();
