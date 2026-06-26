@@ -1953,7 +1953,7 @@ function renderBoardCol(colId, issues, nextStatuses) {
     const btnHtml = nextStatuses.map(function(s) {
       const label = s === 'in-progress' ? '▶ Start' : s === 'resolved' ? '✓ Resolve' : '↩ Reopen';
       const color = s === 'resolved' ? '#00FF88' : s === 'in-progress' ? '#FFB800' : '#8A8AA0';
-      return '<button onclick="moveIssue(\'' + issue.id + '\',\'' + s + '\')" style="background:none;border:1px solid ' + color + ';border-radius:8px;color:' + color + ';font-size:10px;font-weight:700;padding:3px 8px;cursor:pointer;">' + label + '</button>';
+      return '<button data-issueid="' + issue.id + '" data-status="' + s + '" onclick="moveIssue(this.dataset.issueid,this.dataset.status)" style="background:none;border:1px solid ' + color + ';border-radius:8px;color:' + color + ';font-size:10px;font-weight:700;padding:3px 8px;cursor:pointer;">' + label + '</button>';
     }).join('');
 
     card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">'
