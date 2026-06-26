@@ -2240,7 +2240,7 @@ function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'
 function addBubble(role, text) {
   const el = document.createElement('div');
   el.className = 'bubble ' + role;
-  if (role === 'assistant') el.innerHTML = '<div class="sender"><img src="/public/fellito-avatar.png" alt="" style="width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px;" onerror="this.style.display=\'none\'">FELLITO</div><span class="bubble-text">' + escHtml(text).replace(/\\n/g,'<br>') + '</span>';
+  if (role === 'assistant') el.innerHTML = '<div class="sender"><img src="/public/fellito-avatar.png" alt="" style="width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px;" onerror="this.remove()">FELLITO</div><span class="bubble-text">' + escHtml(text).replace(/\\n/g,'<br>') + '</span>';
   else el.textContent = text;
   document.getElementById('messages').appendChild(el);
   el.scrollIntoView({ behavior: 'smooth', block: 'end' });
