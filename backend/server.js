@@ -855,7 +855,8 @@ html,body{height:100%;height:100dvh;background:#050508;color:#fff;font-family:-a
 
 /* header */
 .header{background:#12121A;padding:10px 16px 12px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #1E1E2E;flex-shrink:0;}
-.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#00E5FF,#0070FF);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#000;flex-shrink:0;}
+.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#00E5FF,#0070FF);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#000;flex-shrink:0;overflow:hidden;}
+.avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 .header-info{flex:1;min-width:0;}
 .header-name{font-size:15px;font-weight:800;color:#00E5FF;letter-spacing:1px;}
 .header-sub{font-size:10px;color:#8A8AA0;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -936,7 +937,7 @@ textarea::placeholder{color:#8A8AA0;}
 
   <!-- Header -->
   <div class="header">
-    <div class="avatar">F</div>
+    <div class="avatar"><img src="/public/fellito-avatar.png" alt="FELLITO" onerror="this.style.display='none';this.parentNode.textContent='F';"></div>
     <div class="header-info">
       <div class="header-name">FELLITO</div>
       <div class="header-sub" id="headerSub">${name} · Epic ATE Support</div>
@@ -1766,7 +1767,7 @@ function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'
 function addBubble(role, text) {
   const el = document.createElement('div');
   el.className = 'bubble ' + role;
-  if (role === 'assistant') el.innerHTML = '<div class="sender">FELLITO</div><span class="bubble-text">' + escHtml(text).replace(/\\n/g,'<br>') + '</span>';
+  if (role === 'assistant') el.innerHTML = '<div class="sender"><img src="/public/fellito-avatar.png" alt="" style="width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px;" onerror="this.style.display=\'none\'">FELLITO</div><span class="bubble-text">' + escHtml(text).replace(/\\n/g,'<br>') + '</span>';
   else el.textContent = text;
   document.getElementById('messages').appendChild(el);
   el.scrollIntoView({ behavior: 'smooth', block: 'end' });
