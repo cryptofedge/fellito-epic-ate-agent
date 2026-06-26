@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v26';
+const CACHE = 'fellito-v27';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -1396,6 +1396,13 @@ function checkReady() {
   }
   setTimeout(() => btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 150);
 }
+
+// Global error display — shows JS crashes visibly on mobile for debugging
+window.onerror = function(msg, src, line) {
+  var d = document.getElementById('_errToast');
+  if (!d) { d = document.createElement('div'); d.id = '_errToast'; d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#FF3B5C;color:#fff;font-size:12px;padding:8px 12px;z-index:9999;font-family:monospace;word-break:break-all;'; document.body.appendChild(d); }
+  d.textContent = 'JS ERROR: ' + msg + ' (line ' + line + ')';
+};
 
 // Use visualViewport.height — the only value Samsung Chrome reports correctly
 // (window.innerHeight includes the nav bar; visualViewport.height is the real tappable area)
