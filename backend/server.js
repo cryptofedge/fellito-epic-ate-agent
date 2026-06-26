@@ -392,7 +392,7 @@ app.post('/api/invite', requireOwner, async (req, res) => {
   if (!toEmail) return res.status(400).json({ error: 'toEmail required' });
   try {
     const link = createTempLink({ label: toName || label || toEmail });
-    const baseUrl = process.env.BASE_URL || process.env.BACKEND_URL || 'http://localhost:3001';
+    const baseUrl = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || process.env.BACKEND_URL || 'http://localhost:3001';
     const inviteUrl = baseUrl + '/temp/' + link.token;
     await sendInviteEmail({ toEmail, toName, inviteUrl, label });
     res.json({ ok: true, inviteUrl });
@@ -662,7 +662,7 @@ app.post('/api/temp-links', requireOwner, async (req, res) => {
   try {
     const { label, goLiveId, assignedModules, toEmail, permanent } = req.body;
     const link = createTempLink({ label, goLiveId, assignedModules, permanent });
-    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.BACKEND_PORT || 3001}`;
+    const baseUrl = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.BACKEND_PORT || 3001}`;
     const inviteUrl = `${baseUrl}/temp/${link.token}`;
 
     // Respond immediately — email sends in background so button never hangs
@@ -742,7 +742,7 @@ function openAdminLink(token, ip, cookieToken) {
 app.post('/api/admin-links', requireOwner, (req, res) => {
   const { label, toEmail } = req.body;
   const link = createAdminLink(label);
-  const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.BACKEND_PORT || 3001}`;
+  const baseUrl = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.BACKEND_PORT || 3001}`;
   const inviteUrl = `${baseUrl}/admin-temp/${link.token}`;
   res.json({ ...link, inviteUrl, emailSent: !!toEmail, emailError: null });
   if (toEmail) {
@@ -753,7 +753,7 @@ app.post('/api/admin-links', requireOwner, (req, res) => {
 
 app.get('/api/admin-links', requireOwner, (_req, res) => {
   const links = [...adminLinkStore.values()].map(l => {
-    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.BACKEND_PORT || 3001}`;
+    const baseUrl = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.BACKEND_PORT || 3001}`;
     return { ...l, inviteUrl: `${baseUrl}/admin-temp/${l.token}`, status: !l.openedAt && Date.now() < l.expiresAt ? 'pending' : l.sessionExpiresAt && Date.now() < l.sessionExpiresAt ? 'active' : 'expired' };
   });
   res.json(links.reverse());
