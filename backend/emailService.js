@@ -1,17 +1,27 @@
 const nodemailer = require('nodemailer');
-const dns = require('dns');
-dns.setDefaultResultOrder('ipv4first');
+const dns = require('dns').promises;
 
-function getTransporter() {
+let _smtpIpv4 = null;
+async function getSmtpHost() {
+  if (_smtpIpv4) return _smtpIpv4;
+  try {
+    const addrs = await dns.resolve4('smtp.gmail.com');
+    if (addrs?.length) { _smtpIpv4 = addrs[0]; return _smtpIpv4; }
+  } catch (_) {}
+  return 'smtp.gmail.com';
+}
+
+async function getTransporter() {
   const user = process.env.GMAIL_USER;
   const pass = process.env.GMAIL_APP_PASSWORD?.replace(/\s/g, '');
   if (!user || !pass) return null;
+  const host = await getSmtpHost();
   return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
+    host,
     port: 465,
     secure: true,
+    tls: { servername: 'smtp.gmail.com' },
     auth: { user, pass },
-    family: 4,
     connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 10000,
@@ -19,7 +29,7 @@ function getTransporter() {
 }
 
 async function sendInviteEmail({ toEmail, toName, inviteUrl, label }) {
-  const transporter = getTransporter();
+  const transporter = await getTransporter();
   if (!transporter) {
     throw new Error('Email not configured. Add GMAIL_USER and GMAIL_APP_PASSWORD to your .env file.');
   }
@@ -76,7 +86,7 @@ async function sendInviteEmail({ toEmail, toName, inviteUrl, label }) {
 }
 
 async function sendShiftEmail({ toEmail, consultant, goLive, dept, module: mod, date, questionsAnswered, issuesEscalated, issues, summary, pmName }) {
-  const transporter = getTransporter();
+  const transporter = await getTransporter();
   if (!transporter) throw new Error('Email not configured.');
   const displayPM = pmName || toEmail;
   const issueRows = (issues || []).map(i =>
@@ -172,7 +182,7 @@ async function sendShiftEmail({ toEmail, consultant, goLive, dept, module: mod, 
 }
 
 async function sendGoLiveOpportunityEmail({ toEmail, toName, opportunities, sentBy }) {
-  const transporter = getTransporter();
+  const transporter = await getTransporter();
   if (!transporter) throw new Error('Email not configured. Add GMAIL_USER and GMAIL_APP_PASSWORD.');
 
   const confColor = c => c === 'high' ? '#00E5FF' : c === 'medium' ? '#F5A623' : '#8A8AA0';
