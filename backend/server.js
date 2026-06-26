@@ -15,7 +15,7 @@ const { listIssues, createIssue, updateIssue, deleteIssue, generateReport } = re
 const { listLinks, ingestLink, deleteLink } = require('./linksEngine');
 const { updateMemory, buildMemoryContext, addInsight, listAllMemory, closeSession } = require('./memoryEngine');
 const { createTempLink, listTempLinks, openLink, revokeTempLink, validateTempSession, SESSION_TTL_MS } = require('./tempLinkStore');
-const { sendInviteEmail } = require('./emailService');
+const { sendInviteEmail, sendShiftEmail } = require('./emailService');
 const cookieParser = require('cookie-parser');
 const { signToken } = require('./authEngine');
 
@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v20';
+const CACHE = 'fellito-v21';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -700,6 +700,30 @@ app.get('/api/issues/report/:goLiveId', requireAuth, (req, res) => {
   res.json(generateReport(req.params.goLiveId));
 });
 
+// ─── Shift Log ───────────────────────────────────────────────────────────────
+app.post('/api/shift/end', requireAuth, async (req, res) => {
+  try {
+    const { goLive, dept, module: mod, questionsAnswered, issuesEscalated, issues, summary, pmEmail, pmName } = req.body;
+    const consultant = req.user.email || req.user.name || 'Consultant';
+    const date = new Date().toLocaleDateString('en-US', { weekday:'short', year:'numeric', month:'short', day:'numeric' });
+
+    if (!pmEmail) return res.status(400).json({ error: 'PM email required' });
+
+    await sendShiftEmail({
+      toEmail: pmEmail, pmName, consultant, goLive: goLive || 'Unknown Go-Live',
+      dept: dept || '—', module: mod || '—', date,
+      questionsAnswered: questionsAnswered || 0,
+      issuesEscalated: issuesEscalated || 0,
+      issues: issues || [], summary: summary || '',
+    });
+
+    res.json({ ok: true, message: `Shift log sent to ${pmEmail}` });
+  } catch (err) {
+    console.error('[ShiftLog]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Temp Invite Links ────────────────────────────────────────────────────────
 
 app.post('/api/temp-links', requireOwner, async (req, res) => {
@@ -949,6 +973,45 @@ textarea::placeholder{color:#8A8AA0;}
 <body>
 <div class="shell"><div class="phone" id="phone">
 
+  <!-- Shift Log Modal -->
+  <div id="shiftModal" style="display:none;position:absolute;inset:0;background:#000000CC;z-index:200;overflow-y:auto;padding:24px 16px;">
+    <div style="background:#12121A;border:1px solid #1E1E2E;border-radius:20px;padding:24px;max-width:400px;margin:0 auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <div style="font-size:15px;font-weight:900;color:#00FF88;letter-spacing:1px;">📋 END SHIFT</div>
+        <button onclick="document.getElementById('shiftModal').style.display='none'" style="background:none;border:none;color:#8A8AA0;font-size:20px;cursor:pointer;">×</button>
+      </div>
+
+      <!-- Stats preview -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <div style="flex:1;background:#0A0A0F;border:1px solid #1E1E2E;border-radius:12px;padding:12px;text-align:center;">
+          <div id="shiftQCount" style="font-size:22px;font-weight:900;color:#00E5FF;">0</div>
+          <div style="font-size:10px;color:#8A8AA0;letter-spacing:1px;margin-top:2px;">QUESTIONS</div>
+        </div>
+        <div style="flex:1;background:#0A0A0F;border:1px solid #1E1E2E;border-radius:12px;padding:12px;text-align:center;">
+          <div id="shiftICount" style="font-size:22px;font-weight:900;color:#FF3B5C;">0</div>
+          <div style="font-size:10px;color:#8A8AA0;letter-spacing:1px;margin-top:2px;">ESCALATED</div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;color:#8A8AA0;letter-spacing:1px;margin-bottom:6px;">SHIFT NOTES (optional)</div>
+        <textarea id="shiftNotes" placeholder="Anything the PM should know..." rows="3" style="width:100%;box-sizing:border-box;background:#0A0A0F;border:1px solid #2A2A3E;border-radius:10px;color:#fff;font-size:13px;padding:10px;resize:none;font-family:inherit;"></textarea>
+      </div>
+
+      <!-- PM Email -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:11px;color:#8A8AA0;letter-spacing:1px;margin-bottom:6px;">PM EMAIL</div>
+        <input id="shiftPmEmail" type="email" placeholder="pm@hospital.org" style="width:100%;box-sizing:border-box;background:#0A0A0F;border:1px solid #2A2A3E;border-radius:10px;color:#fff;font-size:13px;padding:10px;font-family:inherit;">
+      </div>
+
+      <button onclick="submitShiftLog()" style="width:100%;background:linear-gradient(135deg,#00FF88,#00E5FF);border:none;border-radius:14px;color:#000;font-size:14px;font-weight:900;padding:14px;cursor:pointer;letter-spacing:1px;">
+        SEND SHIFT LOG
+      </button>
+      <div id="shiftStatus" style="text-align:center;font-size:12px;color:#8A8AA0;margin-top:10px;"></div>
+    </div>
+  </div>
+
   <!-- Status bar -->
   <div class="status-bar">
     <span class="status-time" id="clock"></span>
@@ -1040,6 +1103,7 @@ textarea::placeholder{color:#8A8AA0;}
     <div style="padding:6px 12px 0;display:flex;gap:8px;flex-wrap:wrap;">
       <button onclick="triggerDowntime()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#FFB800;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">⏳ Downtime</button>
       <button onclick="escalateIssue()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#FF3B5C;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">🚨 Escalate</button>
+      <button onclick="openShiftModal()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#00FF88;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">📋 End Shift</button>
     </div>
     <div class="input-bar">
       <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none" onchange="handleUpload(this)">
@@ -1678,11 +1742,61 @@ async function escalateIssue() {
       body: JSON.stringify({ title, description: summary, module: selectedModule, dept: selectedDept, goLiveId: selectedGoLiveId, severity: 'high' }),
     });
     if (r.ok) {
+      shiftEscalatedIssues.push({ title, module: selectedModule, dept: selectedDept, severity: 'high' });
       addBubble('assistant', '🚨 Issue logged sharp sharp — "' + title + '". Leadership can see it in the admin panel.');
     } else {
       addBubble('assistant', 'Could not log issue — try again.');
     }
   } catch { addBubble('assistant', 'Connection issue — could not escalate.'); }
+}
+
+// ── Shift Log ─────────────────────────────────────────────────────────────
+let shiftEscalatedIssues = [];
+
+function openShiftModal() {
+  // Count questions from chat history (user messages only)
+  const qCount = chatHistory.filter(m => m.role === 'user').length;
+  document.getElementById('shiftQCount').textContent = qCount;
+  document.getElementById('shiftICount').textContent = shiftEscalatedIssues.length;
+  document.getElementById('shiftNotes').value = '';
+  document.getElementById('shiftStatus').textContent = '';
+  document.getElementById('shiftModal').style.display = 'block';
+}
+
+async function submitShiftLog() {
+  const pmEmail = document.getElementById('shiftPmEmail').value.trim();
+  const notes = document.getElementById('shiftNotes').value.trim();
+  const status = document.getElementById('shiftStatus');
+
+  if (!pmEmail) { status.textContent = 'Enter PM email first.'; status.style.color = '#FF3B5C'; return; }
+
+  status.textContent = 'Sending...'; status.style.color = '#8A8AA0';
+
+  try {
+    const r = await fetch('/api/shift/end', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
+      body: JSON.stringify({
+        goLive: selectedGoLive,
+        dept: selectedDept,
+        module: selectedModule,
+        questionsAnswered: chatHistory.filter(m => m.role === 'user').length,
+        issuesEscalated: shiftEscalatedIssues.length,
+        issues: shiftEscalatedIssues,
+        summary: notes,
+        pmEmail,
+      }),
+    });
+    const data = await r.json();
+    if (r.ok) {
+      status.textContent = '✅ Sent to ' + pmEmail;
+      status.style.color = '#00FF88';
+      setTimeout(() => { document.getElementById('shiftModal').style.display = 'none'; }, 2000);
+    } else {
+      status.textContent = data.error || 'Failed — try again.';
+      status.style.color = '#FF3B5C';
+    }
+  } catch { status.textContent = 'Connection error.'; status.style.color = '#FF3B5C'; }
 }
 
 // ── Nearby ─────────────────────────────────────────────────────────────────

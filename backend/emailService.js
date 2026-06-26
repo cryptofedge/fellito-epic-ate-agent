@@ -72,4 +72,100 @@ async function sendInviteEmail({ toEmail, toName, inviteUrl, label }) {
   });
 }
 
-module.exports = { sendInviteEmail };
+async function sendShiftEmail({ toEmail, consultant, goLive, dept, module: mod, date, questionsAnswered, issuesEscalated, issues, summary, pmName }) {
+  const transporter = getTransporter();
+  if (!transporter) throw new Error('Email not configured.');
+  const displayPM = pmName || toEmail;
+  const issueRows = (issues || []).map(i =>
+    `<tr><td style="padding:6px 10px;color:#fff;font-size:13px;border-bottom:1px solid #1E1E2E;">${i.title}</td>
+     <td style="padding:6px 10px;color:#8A8AA0;font-size:12px;border-bottom:1px solid #1E1E2E;">${i.module || mod || '—'}</td>
+     <td style="padding:6px 10px;font-size:12px;border-bottom:1px solid #1E1E2E;">
+       <span style="background:${i.severity==='high'?'#FF3B5C22':'#00E5FF22'};color:${i.severity==='high'?'#FF3B5C':'#00E5FF'};padding:2px 8px;border-radius:8px;">${i.severity||'med'}</span>
+     </td></tr>`
+  ).join('');
+
+  await transporter.sendMail({
+    from: `"FELLITO · Eclat Universe" <${process.env.GMAIL_USER}>`,
+    to: toEmail,
+    subject: `FELLITO Shift Log — ${consultant} · ${goLive} · ${date}`,
+    html: `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#0A0A0F;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0F;padding:40px 20px;">
+<tr><td align="center">
+<table width="100%" style="max-width:520px;background:#12121A;border-radius:20px;border:1px solid #1E1E2E;overflow:hidden;">
+
+  <tr><td style="background:linear-gradient(135deg,#001A2C,#002A40);padding:28px 32px;">
+    <div style="font-size:28px;font-weight:900;color:#00E5FF;letter-spacing:6px;">FELLITO</div>
+    <div style="font-size:11px;color:#8A8AA0;letter-spacing:3px;margin-top:4px;">SHIFT LOG · ECLAT UNIVERSE</div>
+  </td></tr>
+
+  <tr><td style="padding:28px 32px;">
+    <p style="color:#8A8AA0;font-size:13px;margin:0 0 4px;">Hey ${displayPM},</p>
+    <p style="color:#fff;font-size:15px;font-weight:700;margin:0 0 24px;">Here's the shift wrap-up from <span style="color:#00E5FF;">${consultant}</span>.</p>
+
+    <!-- Stats -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+      <tr>
+        <td style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:12px;padding:14px 18px;text-align:center;width:33%;">
+          <div style="font-size:26px;font-weight:900;color:#00E5FF;">${questionsAnswered}</div>
+          <div style="font-size:10px;color:#8A8AA0;letter-spacing:1px;margin-top:2px;">QUESTIONS</div>
+        </td>
+        <td style="width:12px;"></td>
+        <td style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:12px;padding:14px 18px;text-align:center;width:33%;">
+          <div style="font-size:26px;font-weight:900;color:#FF3B5C;">${issuesEscalated}</div>
+          <div style="font-size:10px;color:#8A8AA0;letter-spacing:1px;margin-top:2px;">ESCALATED</div>
+        </td>
+        <td style="width:12px;"></td>
+        <td style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:12px;padding:14px 18px;text-align:center;width:33%;">
+          <div style="font-size:13px;font-weight:800;color:#fff;">${mod||'—'}</div>
+          <div style="font-size:10px;color:#8A8AA0;letter-spacing:1px;margin-top:2px;">MODULE</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Context -->
+    <table width="100%" style="margin-bottom:24px;border:1px solid #1E1E2E;border-radius:12px;overflow:hidden;">
+      <tr><td style="padding:10px 14px;background:#0A0A0F;border-bottom:1px solid #1E1E2E;">
+        <span style="color:#8A8AA0;font-size:11px;letter-spacing:1px;">GO-LIVE</span>
+        <span style="color:#fff;font-size:13px;font-weight:700;margin-left:12px;">${goLive}</span>
+      </td></tr>
+      <tr><td style="padding:10px 14px;background:#0A0A0F;border-bottom:1px solid #1E1E2E;">
+        <span style="color:#8A8AA0;font-size:11px;letter-spacing:1px;">DEPT</span>
+        <span style="color:#fff;font-size:13px;font-weight:700;margin-left:24px;">${dept||'—'}</span>
+      </td></tr>
+      <tr><td style="padding:10px 14px;background:#0A0A0F;">
+        <span style="color:#8A8AA0;font-size:11px;letter-spacing:1px;">DATE</span>
+        <span style="color:#fff;font-size:13px;font-weight:700;margin-left:24px;">${date}</span>
+      </td></tr>
+    </table>
+
+    ${summary ? `<!-- Summary -->
+    <div style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:12px;padding:16px 18px;margin-bottom:24px;">
+      <div style="font-size:11px;color:#8A8AA0;letter-spacing:1px;margin-bottom:8px;">SHIFT NOTES</div>
+      <div style="color:#fff;font-size:13px;line-height:1.7;">${summary.replace(/\n/g,'<br>')}</div>
+    </div>` : ''}
+
+    ${issueRows ? `<!-- Issues -->
+    <div style="font-size:11px;color:#8A8AA0;letter-spacing:1px;margin-bottom:8px;">ESCALATED ISSUES</div>
+    <table width="100%" style="border:1px solid #1E1E2E;border-radius:12px;overflow:hidden;margin-bottom:24px;">
+      <tr style="background:#0A0A0F;">
+        <th style="padding:8px 10px;text-align:left;font-size:11px;color:#8A8AA0;font-weight:600;">ISSUE</th>
+        <th style="padding:8px 10px;text-align:left;font-size:11px;color:#8A8AA0;font-weight:600;">MODULE</th>
+        <th style="padding:8px 10px;text-align:left;font-size:11px;color:#8A8AA0;font-weight:600;">SEV</th>
+      </tr>
+      ${issueRows}
+    </table>` : ''}
+
+  </td></tr>
+
+  <tr><td style="background:#0A0A0F;padding:16px 32px;text-align:center;border-top:1px solid #1E1E2E;">
+    <p style="color:#8A8AA0;font-size:11px;margin:0;letter-spacing:1px;">POWERED BY ECLAT UNIVERSE · FELLITO ATE AGENT</p>
+  </td></tr>
+
+</table>
+</td></tr></table>
+</body></html>`,
+  });
+}
+
+module.exports = { sendInviteEmail, sendShiftEmail };
