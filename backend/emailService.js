@@ -9,9 +9,10 @@ function getTransporter() {
     port: 465,
     secure: true,
     auth: { user, pass },
-    connectionTimeout: 6000,
-    greetingTimeout: 6000,
-    socketTimeout: 6000,
+    family: 4,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
   });
 }
 
