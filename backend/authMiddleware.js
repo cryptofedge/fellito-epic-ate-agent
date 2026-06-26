@@ -10,12 +10,8 @@ function requireAuth(req, res, next) {
   try {
     const payload = verifyToken(header.slice(7));
 
-    // Temp session — validate against live store (catches revokes + expiry + device switching)
+    // Temp session — attach synthetic user, no expiry check
     if (payload.temp && payload.linkId) {
-      if (!validateTempSession(payload.linkId, payload.browserToken)) {
-        return res.status(401).json({ error: 'SESSION_EXPIRED', message: 'Your session has expired. Contact your administrator for a new invite link.' });
-      }
-      // Attach a synthetic user object for temp sessions
       req.user = {
         id: payload.sub,
         linkId: payload.linkId,
@@ -24,7 +20,6 @@ function requireAuth(req, res, next) {
         role: 'contributor',
         assignedGoLives: payload.assignedGoLives ?? [],
         temp: true,
-        sessionExpiresAt: payload.sessionExpiresAt,
         active: true,
       };
       return next();
