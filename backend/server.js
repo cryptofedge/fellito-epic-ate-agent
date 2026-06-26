@@ -61,7 +61,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v30';
+const CACHE = 'fellito-v31';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -719,6 +719,57 @@ app.delete('/api/adoption/:id', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── Tip Sheet Generator ─────────────────────────────────────────────────────
+app.post('/api/tipsheet', requireAuth, async (req, res) => {
+  const { moduleTag, dept, goLive } = req.body;
+  if (!moduleTag) return res.status(400).json({ error: 'moduleTag required' });
+
+  const prompt = `You are FELLITO — a 13-year Epic Credentialed Trainer. Generate a concise Go-Live Tip Sheet for Epic ${moduleTag}${dept ? ' in the ' + dept + ' department' : ''}${goLive ? ' for the ' + goLive + ' go-live' : ''}.
+
+Format the tip sheet EXACTLY like this (use these exact section headers):
+
+🔑 TOP 5 THINGS TO KNOW
+1. [tip]
+2. [tip]
+3. [tip]
+4. [tip]
+5. [tip]
+
+⚡ QUICK WINS (things users love once they discover them)
+• [tip]
+• [tip]
+• [tip]
+
+🚨 COMMON PITFALLS (what trips people up on Day 1)
+• [pitfall and fix]
+• [pitfall and fix]
+• [pitfall and fix]
+
+🔁 KEY WORKFLOW STEPS
+[Most critical workflow for this module, numbered steps, max 6 steps]
+
+📞 WHEN TO ESCALATE
+• [scenario]
+• [scenario]
+
+Rules:
+- Be specific to ${moduleTag}${dept ? ' / ' + dept : ''} — no generic Epic advice
+- Floor-level language, not textbook
+- Each bullet max 15 words
+- No intro, no outro, no preamble — start with 🔑 immediately`;
+
+  try {
+    const msg = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    res.json({ content: msg.content[0].text });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── Pre-Go-Live Quiz ────────────────────────────────────────────────────────
 app.post('/api/quiz', requireAuth, async (req, res) => {
   const { moduleTag, dept } = req.body;
@@ -1274,6 +1325,36 @@ textarea::placeholder{color:#8A8AA0;}
     </div>
   </div>
 
+  <!-- Tip Sheet Modal -->
+  <div id="tipModal" style="display:none;position:absolute;inset:0;background:#000000CC;z-index:200;overflow-y:auto;padding:20px 14px;">
+    <div style="background:#12121A;border:1px solid #1E1E2E;border-radius:20px;padding:22px;max-width:420px;margin:0 auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <button onclick="document.getElementById('tipModal').style.display='none'" style="background:none;border:1px solid #2A2A3E;border-radius:20px;color:#8A8AA0;font-size:12px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:5px;">← Back</button>
+        <div style="font-size:15px;font-weight:900;color:#00E5FF;letter-spacing:1px;">📄 TIP SHEET</div>
+        <div style="width:60px;"></div>
+      </div>
+      <div id="tipContext" style="font-size:11px;color:#8A8AA0;letter-spacing:1px;margin-bottom:14px;"></div>
+
+      <!-- Generate button -->
+      <button id="tipGenBtn" onclick="generateTipSheet()" style="width:100%;background:linear-gradient(135deg,#00E5FF,#0070FF);border:none;border-radius:12px;color:#000;font-size:13px;font-weight:900;padding:12px;cursor:pointer;letter-spacing:.5px;margin-bottom:16px;">⚡ GENERATE TIP SHEET</button>
+
+      <!-- Loading -->
+      <div id="tipLoading" style="display:none;text-align:center;padding:24px 0;color:#8A8AA0;font-size:13px;">Generating your tip sheet...</div>
+
+      <!-- Output -->
+      <div id="tipOutput" style="display:none;">
+        <div id="tipContent" style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:14px;padding:14px;font-size:12px;color:#C8C8D8;line-height:1.7;white-space:pre-wrap;font-family:inherit;margin-bottom:12px;max-height:55vh;overflow-y:auto;"></div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="copyTipSheet()" style="flex:1;background:#1E1E2E;border:1px solid #2A2A3E;border-radius:12px;color:#00E5FF;font-size:12px;font-weight:700;padding:10px;cursor:pointer;letter-spacing:.5px;">📋 Copy</button>
+          <button onclick="generateTipSheet()" style="flex:1;background:#1E1E2E;border:1px solid #2A2A3E;border-radius:12px;color:#8A8AA0;font-size:12px;font-weight:700;padding:10px;cursor:pointer;letter-spacing:.5px;">🔄 Regenerate</button>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div id="tipError" style="display:none;color:#FF3B5C;font-size:12px;text-align:center;padding:12px 0;"></div>
+    </div>
+  </div>
+
   <!-- ── SCREEN 2: Chat ── -->
   <div class="screen" id="screen-chat">
     <div class="context-bar">
@@ -1288,6 +1369,7 @@ textarea::placeholder{color:#8A8AA0;}
       <button onclick="escalateIssue()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#FF3B5C;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">🚨 Escalate</button>
       <button onclick="openBoard()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#A78BFA;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">📊 Board</button>
       <button onclick="openAdoption()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#FFB800;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">👥 Tracker</button>
+      <button onclick="openTipSheet()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#00E5FF;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">📄 Tips</button>
       <button onclick="openShiftModal()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#00FF88;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">🏁 End Shift</button>
     </div>
     <div class="input-bar">
@@ -2138,6 +2220,55 @@ function showResults() {
 
 // ── Shift Log ─────────────────────────────────────────────────────────────
 let shiftEscalatedIssues = [];
+
+// ── Tip Sheet Generator ──────────────────────────────────────────────────────
+function openTipSheet() {
+  const modal = document.getElementById('tipModal');
+  const ctx = selectedModule && selectedDept
+    ? 'MODULE: ' + selectedModule.toUpperCase() + '  ·  DEPT: ' + selectedDept.toUpperCase()
+    : selectedModule ? 'MODULE: ' + selectedModule.toUpperCase()
+    : 'No module selected — select one on the home screen first';
+  document.getElementById('tipContext').textContent = ctx;
+  document.getElementById('tipOutput').style.display = 'none';
+  document.getElementById('tipLoading').style.display = 'none';
+  document.getElementById('tipError').style.display = 'none';
+  document.getElementById('tipGenBtn').style.display = 'block';
+  modal.style.display = 'block';
+}
+
+async function generateTipSheet() {
+  if (!selectedModule) { alert('Select a module first on the home screen.'); return; }
+  document.getElementById('tipGenBtn').style.display = 'none';
+  document.getElementById('tipLoading').style.display = 'block';
+  document.getElementById('tipOutput').style.display = 'none';
+  document.getElementById('tipError').style.display = 'none';
+  try {
+    const r = await fetch('/api/tipsheet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
+      body: JSON.stringify({ moduleTag: selectedModule, dept: selectedDept, goLive: selectedGoLive })
+    });
+    const data = await r.json();
+    if (!r.ok || data.error) throw new Error(data.error || 'Generation failed');
+    document.getElementById('tipContent').textContent = data.content;
+    document.getElementById('tipLoading').style.display = 'none';
+    document.getElementById('tipOutput').style.display = 'block';
+    document.getElementById('tipGenBtn').style.display = 'none';
+  } catch (e) {
+    document.getElementById('tipLoading').style.display = 'none';
+    document.getElementById('tipError').textContent = 'Error: ' + e.message;
+    document.getElementById('tipError').style.display = 'block';
+    document.getElementById('tipGenBtn').style.display = 'block';
+  }
+}
+
+async function copyTipSheet() {
+  const text = document.getElementById('tipContent').textContent;
+  await navigator.clipboard.writeText(text);
+  const btn = document.querySelector('#tipOutput button');
+  btn.textContent = '✅ Copied!';
+  setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
+}
 
 // ── Adoption Tracker ─────────────────────────────────────────────────────────
 let adoptionStatus = '';
