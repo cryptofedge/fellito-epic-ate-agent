@@ -1795,7 +1795,7 @@ ta.addEventListener('keydown', e => { if (e.key==='Enter' && !e.shiftKey) { e.pr
 async function sendMessage() {
   if (expired) return;
   const text = ta.value.trim(); if (!text) return;
-  if (Date.now() >= SESSION_EXPIRES_AT) { expire(); return; }
+  if (!IS_PERM && SESSION_EXPIRES_AT > 0 && Date.now() >= SESSION_EXPIRES_AT) { expire(); return; }
 
   ta.value = ''; ta.style.height = 'auto';
   document.getElementById('sendBtn').disabled = true;
