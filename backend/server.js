@@ -2109,6 +2109,21 @@ button:hover{opacity:.9;}
 </html>`);
 });
 
+// ─── Temp password reset (remove after use) ───────────────────────────────────
+app.post('/api/auth/reset-pw', async (req, res) => {
+  const { secret, email, newPassword } = req.body;
+  if (secret !== process.env.OWNER_MAGIC_SECRET) return res.status(403).json({ error: 'Denied' });
+  const fs = require('fs'), path = require('path');
+  const file = path.join(__dirname, 'data', 'users.json');
+  const users = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const u = users.find(x => x.email.toLowerCase() === email.toLowerCase());
+  if (!u) return res.status(404).json({ error: 'User not found' });
+  const bcrypt = require('bcryptjs');
+  u.passwordHash = await bcrypt.hash(newPassword, 12);
+  fs.writeFileSync(file, JSON.stringify(users, null, 2), 'utf8');
+  res.json({ ok: true, email: u.email });
+});
+
 // ─── Owner Magic Link ─────────────────────────────────────────────────────────
 app.get('/owner/:secret', (req, res) => {
   const secret = process.env.OWNER_MAGIC_SECRET;
