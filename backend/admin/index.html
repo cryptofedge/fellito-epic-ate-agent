@@ -1766,9 +1766,8 @@
         modules: item.modules || [],
       });
       if (data.error) throw new Error(data.error);
-      await loadGoLives();
-      await renderTeam();
-      showToast('Go-Live added: ' + data.name);
+      goLives.push(data);
+      showToast('✅ Go-Live added: ' + data.name);
       return data.id;
     } catch (e) {
       alert('Error: ' + e.message);
