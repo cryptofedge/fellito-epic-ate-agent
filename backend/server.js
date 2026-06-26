@@ -116,6 +116,26 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+app.post('/api/auth/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required' });
+  try {
+    const { listTeam } = require('./authEngine');
+    const team = listTeam ? listTeam() : [];
+    const user = team.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (!user) return res.json({ ok: true }); // silent — don't reveal if email exists
+    const baseUrl = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || process.env.BACKEND_URL || 'http://localhost:3001';
+    const { createTempLink } = require('./tempLinkStore');
+    const link = createTempLink({ label: user.name || email, permanent: true });
+    const inviteUrl = `${baseUrl}/temp/${link.id}`;
+    const { sendInviteEmail } = require('./emailService');
+    await sendInviteEmail({ toEmail: user.email, toName: user.name, inviteUrl, label: 'Password Reset' });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to send reset email' });
+  }
+});
+
 // ─── Admin: current user ──────────────────────────────────────────────────────
 app.get('/api/admin/me', requireAuth, (req, res) => {
   const { id, email, name, role, assignedGoLives } = req.user;
@@ -1928,6 +1948,8 @@ input:focus{border-color:#00E5FF;}
 .err{color:#FF4444;font-size:13px;text-align:center;margin-top:12px;display:none;}
 .ok{color:#00E5FF;font-size:13px;text-align:center;margin-top:12px;display:none;}
 .view{display:none;} .view.active{display:block;}
+.btn-link{width:100%;background:none;border:none;color:#8A8AA0;font-size:13px;cursor:pointer;margin-top:8px;padding:8px;text-decoration:underline;}
+.btn-link:hover{color:#00E5FF;}
 </style>
 </head>
 <body>
@@ -1941,7 +1963,17 @@ input:focus{border-color:#00E5FF;}
     <input id="pass" type="password" placeholder="Password" autocomplete="current-password">
     <button class="btn-primary" onclick="doLogin()">Enter →</button>
     <button class="btn-secondary" onclick="show('viewRegister')">Create Account</button>
+    <button class="btn-link" onclick="show('viewForgot')">Forgot Password?</button>
     <div class="err" id="loginErr"></div>
+  </div>
+
+  <!-- FORGOT PASSWORD -->
+  <div class="view" id="viewForgot">
+    <input id="forgotEmail" type="email" placeholder="Enter your email" autocomplete="email">
+    <button class="btn-primary" onclick="doForgot()">Send Reset Link →</button>
+    <button class="btn-secondary" onclick="show('viewLogin')">Back to Login</button>
+    <div class="err" id="forgotErr"></div>
+    <div class="ok"  id="forgotOk"></div>
   </div>
 
   <!-- REGISTER -->
@@ -1999,6 +2031,20 @@ async function doRegister() {
     if (!res.ok) { err.textContent = data.error || 'Registration failed.'; err.style.display = 'block'; return; }
     ok.textContent = 'Account created! You can now log in.'; ok.style.display = 'block';
     setTimeout(() => show('viewLogin'), 1800);
+  } catch { err.textContent = 'Connection issue — try again.'; err.style.display = 'block'; }
+}
+
+async function doForgot() {
+  const email = document.getElementById('forgotEmail').value.trim();
+  const err   = document.getElementById('forgotErr');
+  const ok    = document.getElementById('forgotOk');
+  err.style.display = 'none'; ok.style.display = 'none';
+  if (!email) { err.textContent = 'Enter your email.'; err.style.display = 'block'; return; }
+  try {
+    const res  = await fetch('/api/auth/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+    const data = await res.json();
+    if (!res.ok) { err.textContent = data.error || 'Something went wrong.'; err.style.display = 'block'; return; }
+    ok.textContent = 'Check your email — a reset link is on the way.'; ok.style.display = 'block';
   } catch { err.textContent = 'Connection issue — try again.'; err.style.display = 'block'; }
 }
 
