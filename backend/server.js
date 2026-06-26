@@ -12,6 +12,7 @@ const { bootstrapOwner, login, inviteContributor, listTeam, updateTeamMember, de
 const { requireAuth, requireOwner } = require('./authMiddleware');
 const { listGoLives, createGoLive, updateGoLive, deleteGoLive } = require('./goLiveStore');
 const { listIssues, createIssue, updateIssue, deleteIssue, generateReport } = require('./issuesStore');
+const { listAdoption, upsertAdoption, deleteAdoptionRecord } = require('./adoptionStore');
 const { listLinks, ingestLink, deleteLink } = require('./linksEngine');
 const { updateMemory, buildMemoryContext, addInsight, listAllMemory, closeSession } = require('./memoryEngine');
 const { createTempLink, listTempLinks, openLink, revokeTempLink, validateTempSession, SESSION_TTL_MS } = require('./tempLinkStore');
@@ -60,7 +61,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v29';
+const CACHE = 'fellito-v30';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -701,6 +702,23 @@ app.get('/api/issues/report/:goLiveId', requireAuth, (req, res) => {
   res.json(generateReport(req.params.goLiveId));
 });
 
+// ─── User Adoption Tracker ───────────────────────────────────────────────────
+app.get('/api/adoption', requireAuth, (req, res) => {
+  res.json(listAdoption(req.query.goLiveId || null));
+});
+
+app.post('/api/adoption', requireAuth, (req, res) => {
+  const { goLiveId, userName, department, module, status, notes } = req.body;
+  if (!userName || !status) return res.status(400).json({ error: 'userName and status required' });
+  const consultantName = req.user?.name || '';
+  res.json(upsertAdoption({ goLiveId, userName, department, module, status, notes, consultantName }));
+});
+
+app.delete('/api/adoption/:id', requireAuth, (req, res) => {
+  deleteAdoptionRecord(req.params.id);
+  res.json({ ok: true });
+});
+
 // ─── Pre-Go-Live Quiz ────────────────────────────────────────────────────────
 app.post('/api/quiz', requireAuth, async (req, res) => {
   const { moduleTag, dept } = req.body;
@@ -1227,6 +1245,35 @@ textarea::placeholder{color:#8A8AA0;}
     </div>
   </div>
 
+  <!-- Adoption Tracker Modal -->
+  <div id="adoptionModal" style="display:none;position:absolute;inset:0;background:#000000CC;z-index:200;overflow-y:auto;padding:20px 14px;">
+    <div style="background:#12121A;border:1px solid #1E1E2E;border-radius:20px;padding:22px;max-width:420px;margin:0 auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <button onclick="document.getElementById('adoptionModal').style.display='none'" style="background:none;border:1px solid #2A2A3E;border-radius:20px;color:#8A8AA0;font-size:12px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:5px;">← Back</button>
+        <div style="font-size:15px;font-weight:900;color:#FFB800;letter-spacing:1px;">👥 ADOPTION</div>
+        <div style="width:60px;"></div>
+      </div>
+      <div id="adoptionGoLive" style="font-size:11px;color:#8A8AA0;letter-spacing:1px;margin-bottom:16px;"></div>
+
+      <!-- Add user form -->
+      <div style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:14px;padding:14px;margin-bottom:18px;">
+        <div style="font-size:11px;color:#8A8AA0;font-weight:700;letter-spacing:1px;margin-bottom:10px;">LOG USER STATUS</div>
+        <input id="adoptionName" placeholder="User name or role (e.g. Nurse Chen, ICU RN)" style="width:100%;background:#12121A;border:1px solid #2A2A3E;border-radius:10px;color:#fff;font-size:13px;padding:9px 12px;outline:none;font-family:inherit;box-sizing:border-box;margin-bottom:8px;">
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <button id="adpConfident"  onclick="setAdoptionStatus('confident')"    style="flex:1;background:#0A0A0F;border:1px solid #2A2A3E;border-radius:10px;color:#8A8AA0;font-size:11px;font-weight:700;padding:7px 4px;cursor:pointer;letter-spacing:.5px;transition:all .15s;">✅ Confident</button>
+          <button id="adpStruggling" onclick="setAdoptionStatus('struggling')"   style="flex:1;background:#0A0A0F;border:1px solid #2A2A3E;border-radius:10px;color:#8A8AA0;font-size:11px;font-weight:700;padding:7px 4px;cursor:pointer;letter-spacing:.5px;transition:all .15s;">⚠️ Struggling</button>
+          <button id="adpFollowup"   onclick="setAdoptionStatus('needs-followup')" style="flex:1;background:#0A0A0F;border:1px solid #2A2A3E;border-radius:10px;color:#8A8AA0;font-size:11px;font-weight:700;padding:7px 4px;cursor:pointer;letter-spacing:.5px;transition:all .15s;">🔴 Follow-Up</button>
+        </div>
+        <input id="adoptionNotes" placeholder="Notes (optional)" style="width:100%;background:#12121A;border:1px solid #2A2A3E;border-radius:10px;color:#fff;font-size:12px;padding:8px 12px;outline:none;font-family:inherit;box-sizing:border-box;margin-bottom:8px;">
+        <button onclick="submitAdoption()" style="width:100%;background:linear-gradient(135deg,#FFB800,#FF8800);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:900;padding:10px;cursor:pointer;letter-spacing:.5px;">Save Status</button>
+      </div>
+
+      <!-- User list -->
+      <div id="adoptionList" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div id="adoptionEmpty" style="display:none;text-align:center;padding:20px 0;color:#8A8AA0;font-size:13px;">No users logged yet — add someone above.</div>
+    </div>
+  </div>
+
   <!-- ── SCREEN 2: Chat ── -->
   <div class="screen" id="screen-chat">
     <div class="context-bar">
@@ -1240,6 +1287,7 @@ textarea::placeholder{color:#8A8AA0;}
       <button onclick="triggerDowntime()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#FFB800;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">⏳ Downtime</button>
       <button onclick="escalateIssue()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#FF3B5C;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">🚨 Escalate</button>
       <button onclick="openBoard()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#A78BFA;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">📊 Board</button>
+      <button onclick="openAdoption()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#FFB800;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">👥 Tracker</button>
       <button onclick="openShiftModal()" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:16px;color:#00FF88;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;letter-spacing:.5px;">🏁 End Shift</button>
     </div>
     <div class="input-bar">
@@ -2090,6 +2138,86 @@ function showResults() {
 
 // ── Shift Log ─────────────────────────────────────────────────────────────
 let shiftEscalatedIssues = [];
+
+// ── Adoption Tracker ─────────────────────────────────────────────────────────
+let adoptionStatus = '';
+
+function setAdoptionStatus(s) {
+  adoptionStatus = s;
+  const colors = { confident: '#00FF88', struggling: '#FFB800', 'needs-followup': '#FF3B5C' };
+  const ids = { confident: 'adpConfident', struggling: 'adpStruggling', 'needs-followup': 'adpFollowup' };
+  Object.keys(ids).forEach(k => {
+    const btn = document.getElementById(ids[k]);
+    btn.style.borderColor = k === s ? colors[k] : '#2A2A3E';
+    btn.style.color = k === s ? colors[k] : '#8A8AA0';
+    btn.style.background = k === s ? colors[k] + '22' : '#0A0A0F';
+  });
+}
+
+async function openAdoption() {
+  const modal = document.getElementById('adoptionModal');
+  document.getElementById('adoptionGoLive').textContent = selectedGoLive ? 'GO-LIVE: ' + selectedGoLive.toUpperCase() : '';
+  modal.style.display = 'block';
+  adoptionStatus = '';
+  document.getElementById('adoptionName').value = '';
+  document.getElementById('adoptionNotes').value = '';
+  ['adpConfident','adpStruggling','adpFollowup'].forEach(id => {
+    const b = document.getElementById(id);
+    b.style.borderColor = '#2A2A3E'; b.style.color = '#8A8AA0'; b.style.background = '#0A0A0F';
+  });
+  await loadAdoptionList();
+}
+
+async function loadAdoptionList() {
+  const list = document.getElementById('adoptionList');
+  const empty = document.getElementById('adoptionEmpty');
+  const url = '/api/adoption' + (selectedGoLiveId ? '?goLiveId=' + selectedGoLiveId : '');
+  const r = await fetch(url, { headers: { Authorization: 'Bearer ' + TOKEN } });
+  const records = await r.json();
+  if (!records.length) { list.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  const colors = { confident: '#00FF88', struggling: '#FFB800', 'needs-followup': '#FF3B5C' };
+  const labels = { confident: '✅ Confident', struggling: '⚠️ Struggling', 'needs-followup': '🔴 Needs Follow-Up' };
+  list.innerHTML = records.map(rec => {
+    const c = colors[rec.status] || '#8A8AA0';
+    return '<div style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:12px;padding:10px 12px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:13px;color:#fff;font-weight:700;margin-bottom:2px;">' + escHtml(rec.userName) + '</div>'
+      + (rec.department ? '<div style="font-size:10px;color:#8A8AA0;">' + escHtml(rec.department) + '</div>' : '')
+      + (rec.notes ? '<div style="font-size:11px;color:#8A8AA0;margin-top:3px;line-height:1.4;">' + escHtml(rec.notes) + '</div>' : '')
+      + '</div>'
+      + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">'
+      + '<span style="background:' + c + '22;color:' + c + ';font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;white-space:nowrap;">' + (labels[rec.status] || rec.status) + '</span>'
+      + '<button data-adpid="' + rec.id + '" onclick="deleteAdoption(this.dataset.adpid)" style="background:none;border:none;color:#444;font-size:11px;cursor:pointer;padding:0;">remove</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+async function submitAdoption() {
+  const name = document.getElementById('adoptionName').value.trim();
+  const notes = document.getElementById('adoptionNotes').value.trim();
+  if (!name) { document.getElementById('adoptionName').focus(); return; }
+  if (!adoptionStatus) { alert('Pick a status first'); return; }
+  await fetch('/api/adoption', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
+    body: JSON.stringify({ goLiveId: selectedGoLiveId || null, userName: name, department: selectedDept, module: selectedModule, status: adoptionStatus, notes })
+  });
+  document.getElementById('adoptionName').value = '';
+  document.getElementById('adoptionNotes').value = '';
+  adoptionStatus = '';
+  ['adpConfident','adpStruggling','adpFollowup'].forEach(id => {
+    const b = document.getElementById(id);
+    b.style.borderColor = '#2A2A3E'; b.style.color = '#8A8AA0'; b.style.background = '#0A0A0F';
+  });
+  await loadAdoptionList();
+}
+
+async function deleteAdoption(id) {
+  await fetch('/api/adoption/' + id, { method: 'DELETE', headers: { Authorization: 'Bearer ' + TOKEN } });
+  await loadAdoptionList();
+}
 
 function openShiftModal() {
   // Count questions from chat history (user messages only)
