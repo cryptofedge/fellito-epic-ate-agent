@@ -59,7 +59,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v21';
+const CACHE = 'fellito-v22';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -700,6 +700,47 @@ app.get('/api/issues/report/:goLiveId', requireAuth, (req, res) => {
   res.json(generateReport(req.params.goLiveId));
 });
 
+// ─── Pre-Go-Live Quiz ────────────────────────────────────────────────────────
+app.post('/api/quiz', requireAuth, async (req, res) => {
+  const { moduleTag, dept } = req.body;
+  if (!moduleTag) return res.status(400).json({ error: 'moduleTag required' });
+
+  const prompt = `You are FELLITO, a 13-year Epic consultant. Generate exactly 5 multiple-choice quiz questions to test a consultant before they go live on Epic ${moduleTag} in the ${dept || 'hospital'} department.
+
+Rules:
+- Questions must be practical, floor-level — things that actually trip up consultants on Day 1
+- Each question has exactly 4 options (A, B, C, D)
+- One correct answer per question
+- Include a short explanation (1-2 sentences) for the correct answer
+
+Return ONLY valid JSON in this exact format, no extra text:
+{
+  "questions": [
+    {
+      "q": "Question text here?",
+      "options": ["A. option one", "B. option two", "C. option three", "D. option four"],
+      "answer": "A",
+      "explanation": "Short explanation why A is correct."
+    }
+  ]
+}`;
+
+  try {
+    const client = new Anthropic();
+    const msg = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1500,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const raw = msg.content[0].text.trim();
+    const json = JSON.parse(raw.replace(/^```json\s*/,'').replace(/```$/,'').trim());
+    res.json(json);
+  } catch (err) {
+    console.error('[Quiz]', err.message);
+    res.status(500).json({ error: 'Could not generate quiz — try again.' });
+  }
+});
+
 // ─── Shift Log ───────────────────────────────────────────────────────────────
 app.post('/api/shift/end', requireAuth, async (req, res) => {
   try {
@@ -1087,7 +1128,51 @@ textarea::placeholder{color:#8A8AA0;}
 
     </div>
     <div class="welcome-footer">
-      <button class="start-btn" id="startBtn" disabled onclick="startChat()">Select Go-Live + Module + Dept</button>
+      <div style="display:flex;gap:8px;">
+        <button class="start-btn" id="startBtn" disabled onclick="startChat()" style="flex:1;">Select Go-Live + Module + Dept</button>
+        <button id="quizBtn" disabled onclick="openQuiz()" title="Test your module knowledge before going live" style="background:#1E1E2E;border:1px solid #2A2A3E;border-radius:14px;color:#8A8AA0;font-size:12px;font-weight:900;padding:0 16px;cursor:not-allowed;letter-spacing:.5px;flex-shrink:0;transition:all .2s;">🎯 QUIZ ME</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quiz Modal -->
+  <div id="quizModal" style="display:none;position:absolute;inset:0;background:#000000DD;z-index:200;overflow-y:auto;padding:20px 14px;">
+    <div style="background:#12121A;border:1px solid #1E1E2E;border-radius:20px;padding:22px;max-width:400px;margin:0 auto;">
+
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="font-size:14px;font-weight:900;color:#00E5FF;letter-spacing:1px;">🎯 QUIZ ME</div>
+        <button onclick="closeQuiz()" style="background:none;border:none;color:#8A8AA0;font-size:20px;cursor:pointer;line-height:1;">×</button>
+      </div>
+      <div id="quizSubtitle" style="font-size:11px;color:#8A8AA0;letter-spacing:1px;margin-bottom:18px;"></div>
+
+      <!-- Loading state -->
+      <div id="quizLoading" style="text-align:center;padding:30px 0;">
+        <div style="font-size:28px;margin-bottom:10px;">⏳</div>
+        <div style="color:#8A8AA0;font-size:13px;">FELLITO is loading your quiz...</div>
+      </div>
+
+      <!-- Question area -->
+      <div id="quizQuestion" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div id="quizProgress" style="font-size:11px;color:#8A8AA0;letter-spacing:1px;"></div>
+          <div id="quizScore" style="font-size:11px;color:#00E5FF;font-weight:700;letter-spacing:1px;"></div>
+        </div>
+        <div id="quizQText" style="font-size:14px;color:#fff;font-weight:600;line-height:1.5;margin-bottom:18px;"></div>
+        <div id="quizOptions" style="display:flex;flex-direction:column;gap:8px;"></div>
+        <div id="quizFeedback" style="margin-top:14px;font-size:13px;line-height:1.5;display:none;"></div>
+        <button id="quizNextBtn" onclick="nextQuestion()" style="display:none;width:100%;margin-top:14px;background:linear-gradient(135deg,#00E5FF,#0070FF);border:none;border-radius:12px;color:#000;font-size:13px;font-weight:900;padding:12px;cursor:pointer;letter-spacing:.5px;">NEXT →</button>
+      </div>
+
+      <!-- Results -->
+      <div id="quizResults" style="display:none;text-align:center;padding:10px 0;">
+        <div id="quizResultEmoji" style="font-size:48px;margin-bottom:10px;"></div>
+        <div id="quizResultScore" style="font-size:32px;font-weight:900;color:#00E5FF;margin-bottom:6px;"></div>
+        <div id="quizResultMsg" style="font-size:13px;color:#8A8AA0;line-height:1.6;margin-bottom:20px;"></div>
+        <button onclick="openQuiz()" style="width:100%;background:#1E1E2E;border:1px solid #2A2A3E;border-radius:12px;color:#00E5FF;font-size:13px;font-weight:900;padding:12px;cursor:pointer;letter-spacing:.5px;margin-bottom:8px;">RETRY</button>
+        <button onclick="closeQuiz();startChat();" style="width:100%;background:linear-gradient(135deg,#00E5FF,#0070FF);border:none;border-radius:12px;color:#000;font-size:13px;font-weight:900;padding:12px;cursor:pointer;letter-spacing:.5px;">HIT THE FLOOR →</button>
+      </div>
+
     </div>
   </div>
 
@@ -1240,13 +1325,26 @@ function selectDept(el, name) {
 }
 
 function checkReady() {
-  const btn = document.getElementById('startBtn');
+  const btn  = document.getElementById('startBtn');
+  const quiz = document.getElementById('quizBtn');
   if (selectedGoLive && selectedModule && selectedDept) {
-    btn.disabled = false;
+    btn.disabled  = false;
     btn.textContent = 'Start Session →';
+    if (quiz) {
+      quiz.disabled = false;
+      quiz.style.cursor = 'pointer';
+      quiz.style.color  = '#00E5FF';
+      quiz.style.borderColor = '#00E5FF';
+    }
   } else {
-    btn.disabled = true;
+    btn.disabled  = true;
     btn.textContent = 'Select Go-Live + Module + Dept';
+    if (quiz) {
+      quiz.disabled = true;
+      quiz.style.cursor = 'not-allowed';
+      quiz.style.color  = '#8A8AA0';
+      quiz.style.borderColor = '#2A2A3E';
+    }
   }
   setTimeout(() => btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 150);
 }
@@ -1748,6 +1846,114 @@ async function escalateIssue() {
       addBubble('assistant', 'Could not log issue — try again.');
     }
   } catch { addBubble('assistant', 'Connection issue — could not escalate.'); }
+}
+
+// ── Pre-Go-Live Quiz ──────────────────────────────────────────────────────
+let quizQuestions = [];
+let quizIndex = 0;
+let quizCorrect = 0;
+let quizAnswered = false;
+
+async function openQuiz() {
+  quizQuestions = []; quizIndex = 0; quizCorrect = 0; quizAnswered = false;
+  document.getElementById('quizModal').style.display = 'block';
+  document.getElementById('quizSubtitle').textContent = selectedModule.toUpperCase() + ' · ' + (selectedDept || '').toUpperCase();
+  document.getElementById('quizLoading').style.display = 'block';
+  document.getElementById('quizQuestion').style.display = 'none';
+  document.getElementById('quizResults').style.display = 'none';
+
+  try {
+    const r = await fetch('/api/quiz', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
+      body: JSON.stringify({ moduleTag: selectedModule, dept: selectedDept }),
+    });
+    const data = await r.json();
+    if (!r.ok || !data.questions) throw new Error(data.error || 'No questions returned');
+    quizQuestions = data.questions;
+    document.getElementById('quizLoading').style.display = 'none';
+    showQuestion();
+  } catch (e) {
+    document.getElementById('quizLoading').innerHTML = '<div style="color:#FF3B5C;font-size:13px;">Could not load quiz — ' + e.message + '</div>';
+  }
+}
+
+function closeQuiz() {
+  document.getElementById('quizModal').style.display = 'none';
+}
+
+function showQuestion() {
+  quizAnswered = false;
+  const q = quizQuestions[quizIndex];
+  document.getElementById('quizQuestion').style.display = 'block';
+  document.getElementById('quizProgress').textContent = 'Q ' + (quizIndex + 1) + ' / ' + quizQuestions.length;
+  document.getElementById('quizScore').textContent = 'Score: ' + quizCorrect + '/' + quizIndex;
+  document.getElementById('quizQText').textContent = q.q;
+  document.getElementById('quizFeedback').style.display = 'none';
+  document.getElementById('quizNextBtn').style.display = 'none';
+
+  const opts = document.getElementById('quizOptions');
+  opts.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const letter = ['A','B','C','D'][i];
+    const btn = document.createElement('button');
+    btn.textContent = opt;
+    btn.setAttribute('data-letter', letter);
+    btn.style.cssText = 'width:100%;background:#0A0A0F;border:1px solid #2A2A3E;border-radius:10px;color:#fff;font-size:13px;padding:11px 14px;cursor:pointer;text-align:left;font-family:inherit;transition:all .15s;';
+    btn.onmouseover = () => { if (!quizAnswered) btn.style.borderColor = '#00E5FF'; };
+    btn.onmouseout  = () => { if (!quizAnswered) btn.style.borderColor = '#2A2A3E'; };
+    btn.onclick = () => selectAnswer(letter, btn);
+    opts.appendChild(btn);
+  });
+}
+
+function selectAnswer(letter, btn) {
+  if (quizAnswered) return;
+  quizAnswered = true;
+  const q = quizQuestions[quizIndex];
+  const correct = letter === q.answer;
+  if (correct) quizCorrect++;
+
+  // Color all options
+  document.querySelectorAll('#quizOptions button').forEach(b => {
+    const l = b.getAttribute('data-letter');
+    if (l === q.answer) { b.style.background = '#00FF8822'; b.style.borderColor = '#00FF88'; b.style.color = '#00FF88'; }
+    else if (l === letter && !correct) { b.style.background = '#FF3B5C22'; b.style.borderColor = '#FF3B5C'; b.style.color = '#FF3B5C'; }
+    b.style.cursor = 'default';
+  });
+
+  // Feedback
+  const fb = document.getElementById('quizFeedback');
+  fb.style.display = 'block';
+  fb.style.color = correct ? '#00FF88' : '#FF3B5C';
+  fb.innerHTML = (correct ? '✅ Correct! ' : '❌ Wrong. ') + '<span style="color:#ccc;">' + q.explanation + '</span>';
+
+  document.getElementById('quizScore').textContent = 'Score: ' + quizCorrect + '/' + (quizIndex + 1);
+  document.getElementById('quizNextBtn').style.display = 'block';
+  document.getElementById('quizNextBtn').textContent = quizIndex + 1 < quizQuestions.length ? 'NEXT →' : 'SEE RESULTS';
+}
+
+function nextQuestion() {
+  quizIndex++;
+  if (quizIndex < quizQuestions.length) {
+    showQuestion();
+  } else {
+    showResults();
+  }
+}
+
+function showResults() {
+  document.getElementById('quizQuestion').style.display = 'none';
+  document.getElementById('quizResults').style.display = 'block';
+  const pct = Math.round((quizCorrect / quizQuestions.length) * 100);
+  const emoji = pct === 100 ? '🔥' : pct >= 80 ? '💪' : pct >= 60 ? '📚' : '⚠️';
+  const msg = pct === 100 ? "Perfect score. You're ready. Hit the floor." :
+              pct >= 80  ? "Solid. Review the ones you missed and you're good to go." :
+              pct >= 60  ? "Not bad — but brush up before you go live. Your users will test you." :
+                           "Real talk — spend 20 more minutes on your module before Day 1.";
+  document.getElementById('quizResultEmoji').textContent = emoji;
+  document.getElementById('quizResultScore').textContent = quizCorrect + ' / ' + quizQuestions.length + ' (' + pct + '%)';
+  document.getElementById('quizResultMsg').textContent = msg;
 }
 
 // ── Shift Log ─────────────────────────────────────────────────────────────
