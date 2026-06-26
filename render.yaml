@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: fellito
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_VOICE_ID
+        sync: false
+      - key: GMAIL_USER
+        sync: false
+      - key: GMAIL_APP_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: OWNER_MAGIC_SECRET
+        sync: false
+      - key: BASE_URL
+        sync: false
