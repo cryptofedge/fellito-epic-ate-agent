@@ -61,7 +61,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v32';
+const CACHE = 'fellito-v33';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -824,6 +824,49 @@ Return ONLY valid JSON in this exact format, no extra text:
   } catch (err) {
     console.error('[Quiz]', err.message);
     res.status(500).json({ error: 'Could not generate quiz — try again.' });
+  }
+});
+
+// ─── Offline Cache Seed ──────────────────────────────────────────────────────
+app.post('/api/offline/seed', requireAuth, async (req, res) => {
+  const { moduleTag, dept, goLiveId } = req.body;
+  if (!moduleTag) return res.status(400).json({ error: 'moduleTag required' });
+
+  const ragContext = goLiveId ? await queryDocuments(
+    `${moduleTag} common questions workflows procedures`, goLiveId, 8, moduleTag
+  ) : '';
+
+  const contextBlock = ragContext
+    ? `\nGO-LIVE WORKFLOW CONTEXT (use this to make questions site-specific):\n${ragContext}\n`
+    : '';
+
+  const prompt = `You are FELLITO — a 13-year Epic Credentialed Trainer. Generate 50 Q&A pairs covering the most common questions a consultant gets from users on Day 1 of Epic ${moduleTag} go-live${dept ? ' in the ' + dept + ' department' : ''}.${contextBlock}
+
+Rules:
+- Cover: login issues, basic navigation, order entry, common errors, workflows, printing, downtime
+- Short answers (2-4 sentences max) — floor-level, no jargon
+- Mix of quick fixes, how-to steps, and escalation guidance
+- ${ragContext ? 'Prioritize site-specific workflows from the context above' : 'Be specific to ' + moduleTag + ', no generic Epic platitudes'}
+
+Return ONLY valid JSON, no extra text:
+{
+  "module": "${moduleTag}",
+  "pairs": [
+    { "q": "question text", "a": "answer text" }
+  ]
+}`;
+
+  try {
+    const msg = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const raw = msg.content[0].text.trim().replace(/^```json\s*/,'').replace(/```$/,'').trim();
+    const json = JSON.parse(raw);
+    res.json(json);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
@@ -1599,6 +1642,60 @@ const MODULE_BRIEFS = {
 };
 
 // ── Start chat ─────────────────────────────────────────────────────────────
+// ── Offline Cache ────────────────────────────────────────────────────────────
+const OFFLINE_CACHE_KEY = 'fellito_offline_';
+
+function offlineCacheKey(module) {
+  return OFFLINE_CACHE_KEY + (module || 'general').replace(/\s+/g, '_').toLowerCase();
+}
+
+async function seedOfflineCache(module, dept, goLiveId) {
+  if (!module || !navigator.onLine) return;
+  const key = offlineCacheKey(module);
+  try {
+    const r = await fetch('/api/offline/seed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
+      body: JSON.stringify({ moduleTag: module, dept, goLiveId: goLiveId || null })
+    });
+    if (!r.ok) return;
+    const data = await r.json();
+    if (data.pairs?.length) {
+      localStorage.setItem(key, JSON.stringify({ module, pairs: data.pairs, seededAt: Date.now() }));
+      console.log('[Offline] Seeded ' + data.pairs.length + ' Q&As for ' + module);
+    }
+  } catch (e) {
+    console.warn('[Offline] Seed failed:', e.message);
+  }
+}
+
+function queryOfflineCache(question, module) {
+  const key = offlineCacheKey(module);
+  let cached;
+  try { cached = JSON.parse(localStorage.getItem(key)); } catch { return null; }
+  if (!cached?.pairs?.length) return null;
+
+  const qWords = question.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+  if (!qWords.length) return null;
+
+  let best = null, bestScore = 0;
+  for (const pair of cached.pairs) {
+    const haystack = (pair.q + ' ' + pair.a).toLowerCase();
+    const score = qWords.reduce((s, w) => s + (haystack.includes(w) ? 1 : 0), 0) / qWords.length;
+    if (score > bestScore) { bestScore = score; best = pair; }
+  }
+  return bestScore >= 0.4 ? best : null;
+}
+
+function isOfflineCacheSeeded(module) {
+  try {
+    const cached = JSON.parse(localStorage.getItem(offlineCacheKey(module)));
+    if (!cached?.seededAt) return false;
+    // Re-seed if older than 24 hours
+    return (Date.now() - cached.seededAt) < 86400000;
+  } catch { return false; }
+}
+
 function startChat() {
   document.getElementById('screen-welcome').classList.remove('active');
   document.getElementById('screen-chat').classList.add('active');
@@ -1614,6 +1711,11 @@ function startChat() {
   const tips  = MODULE_BRIEFS[mod] || ['Check order workflows', 'Watch for cosign backlogs', 'Support end-user navigation issues'];
 
   const intro = "I'm FELLITO — locked in on " + mod + " at " + org + ", " + dept + ".\\n\\nTop issues to watch on the floor today:\\n• " + tips.join("\\n• ") + "\\n\\nWhat do you need?";
+
+  // Seed offline cache in background (silent — don't block the UI)
+  if (!isOfflineCacheSeeded(selectedModule)) {
+    seedOfflineCache(selectedModule, selectedDept, selectedGoLiveId);
+  }
 
   setTimeout(() => {
     addBubble('assistant', intro);
@@ -2597,7 +2699,15 @@ async function sendMessage() {
     if (fullReply) { chatHistory.push({ role: 'assistant', content: fullReply }); speakReply(fullReply); }
   } catch {
     hideTyping();
-    addBubble('assistant', 'Connection issue — try again.');
+    const lastQ = chatHistory.filter(m => m.role === 'user').slice(-1)[0]?.content || '';
+    const hit = queryOfflineCache(lastQ, selectedModule);
+    if (hit) {
+      const reply = '📵 Offline mode — answering from cached knowledge:\n\n' + hit.a;
+      addBubble('assistant', reply);
+      chatHistory.push({ role: 'assistant', content: reply });
+    } else {
+      addBubble('assistant', '📵 You appear to be offline. Reconnect to ask FELLITO.\n\nIf this Go-Live was opened before, try asking a more specific question — some answers may be cached.');
+    }
   }
   document.getElementById('sendBtn').disabled = false;
   ta.focus();
