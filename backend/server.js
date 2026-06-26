@@ -827,8 +827,8 @@ html,body{height:100%;height:100dvh;background:#050508;color:#fff;font-family:-a
 .header-info{flex:1;min-width:0;}
 .header-name{font-size:15px;font-weight:800;color:#00E5FF;letter-spacing:1px;}
 .header-sub{font-size:10px;color:#8A8AA0;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.timer-pill{background:rgba(255,184,0,0.15);border:1px solid #FFB800;border-radius:20px;padding:4px 10px;display:flex;align-items:center;gap:4px;flex-shrink:0;}
-.timer-text{font-size:12px;font-weight:800;color:#FFB800;font-family:'Courier New',monospace;}
+.timer-pill{display:none;}
+.timer-text{display:none;}
 
 /* ── SCREENS ── */
 .screen{display:none;flex:1;flex-direction:column;min-height:0;}

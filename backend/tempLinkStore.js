@@ -7,8 +7,8 @@ const FILE = path.join(DATA_DIR, 'temp_links.json');
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
-const LINK_TTL_MS    = 10 * 60 * 1000; // 10 min to first open
-const SESSION_TTL_MS = 10 * 60 * 1000; // 10 min of chat after opening
+const LINK_TTL_MS    = 30 * 24 * 60 * 60 * 1000; // 30 days to first open
+const SESSION_TTL_MS = 8 * 60 * 60 * 1000;        // 8 hours of chat after opening
 
 const PURGE_AFTER_MS = 2 * 60 * 60 * 1000; // keep expired/revoked for 2h then drop
 
