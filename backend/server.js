@@ -61,7 +61,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v37';
+const CACHE = 'fellito-v38';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {

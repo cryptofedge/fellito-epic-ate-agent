@@ -1703,7 +1703,19 @@
     badge.style.display = 'none';
 
     try {
-      const data = await api('GET', `/api/admin/discover?q=${encodeURIComponent(q)}`);
+      // discover needs a longer timeout — Claude can take 20-30s
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 55000);
+      let data;
+      try {
+        const r = await fetch(`/api/admin/discover?q=${encodeURIComponent(q)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: ctrl.signal,
+        });
+        clearTimeout(t);
+        data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Search failed');
+      } catch (e) { clearTimeout(t); throw e; }
       if (data.error) throw new Error(data.error);
 
       discoverResults = data.results || [];
