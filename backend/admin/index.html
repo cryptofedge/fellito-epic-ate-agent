@@ -216,6 +216,7 @@
     <div class="nav-item" id="nav-admin-links" onclick="showPage('admin-links')">🛡️ Admin Access</div>
     <div class="nav-item" id="nav-security" onclick="showPage('security')">🚩 Security Flags</div>
     <div class="nav-item" id="nav-team" onclick="showPage('team')" style="display:none">👥 Team</div>
+    <div class="nav-item" id="nav-discover" onclick="showPage('discover')">🔍 Discover Go-Lives</div>
 
     <div class="sidebar-spacer"></div>
     <div class="sidebar-user">
@@ -541,6 +542,40 @@
       </div>
     </div>
 
+    <!-- ── DISCOVER GO-LIVES ── -->
+    <div id="page-discover" class="page">
+      <div class="page-title">🔍 Discover Go-Lives</div>
+      <div class="page-sub">Search the internet for upcoming Epic EHR go-lives across the US. Add any result directly as a Go-Live event and assign your team.</div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <div style="display:flex;gap:10px;align-items:flex-end;">
+          <div class="form-group" style="flex:1;margin-bottom:0;">
+            <label>Search</label>
+            <input id="discover-query" type="text" placeholder="e.g. Epic go-live Texas 2025, or hospital name..." style="width:100%;" onkeydown="if(event.key==='Enter')runDiscover()" />
+          </div>
+          <button class="btn btn-orange" onclick="runDiscover()" style="white-space:nowrap;height:42px;">Search</button>
+        </div>
+        <div id="discover-source-badge" style="margin-top:10px;font-size:11px;color:#8A8AA0;display:none;"></div>
+      </div>
+
+      <div id="discover-alert" class="alert"></div>
+      <div id="discover-loading" style="display:none;text-align:center;padding:40px;color:#8A8AA0;font-size:14px;">🔍 Searching...</div>
+      <div id="discover-results" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;"></div>
+    </div>
+
+    <!-- ── ASSIGN USERS MODAL (for discovered go-lives) ── -->
+    <div id="assign-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;">
+      <div style="background:#0D0D1A;border:1px solid #2A2A3E;border-radius:20px;padding:32px;width:480px;max-height:80vh;overflow-y:auto;">
+        <div style="font-size:18px;font-weight:700;color:#F0F0FF;margin-bottom:6px;" id="assign-modal-title">Assign Team</div>
+        <div style="font-size:13px;color:#8A8AA0;margin-bottom:20px;" id="assign-modal-sub"></div>
+        <div id="assign-user-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button class="btn btn-ghost" onclick="closeAssignModal()">Cancel</button>
+          <button class="btn btn-orange" onclick="saveAssignments()">Save</button>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /main -->
 </div><!-- /app -->
 
@@ -777,6 +812,7 @@
   let token = localStorage.getItem('fellito_admin_token');
   let currentUser = null;
   let goLives = [];
+  let teamMembers = [];
   let ingestedDocs = [];
   let pendingFiles = [];
 
@@ -1111,6 +1147,7 @@
   async function renderTeam() {
     try {
       const team = await api('GET', '/api/admin/team');
+      teamMembers = team;
       const tbody = document.getElementById('team-table');
       tbody.innerHTML = team.map(u => `
         <tr>
@@ -1646,6 +1683,150 @@
       modal.innerHTML = '<option value="">— None / General —</option>' + goLives.map(g => `<option value="${esc(g.id)}">${esc(g.name)}</option>`).join('');
     }
   }
+
+  // ── DISCOVER GO-LIVES ──────────────────────────────────────────────────────
+
+  let discoverResults = [];
+  let assignTarget = null; // { goLiveId, goLiveName }
+
+  async function runDiscover() {
+    const q = document.getElementById('discover-query').value.trim() || 'Epic EHR go-live 2025 United States';
+    const loading = document.getElementById('discover-loading');
+    const resultsEl = document.getElementById('discover-results');
+    const alertEl = document.getElementById('discover-alert');
+    const badge = document.getElementById('discover-source-badge');
+
+    loading.style.display = 'block';
+    resultsEl.innerHTML = '';
+    alertEl.className = 'alert';
+    alertEl.textContent = '';
+    badge.style.display = 'none';
+
+    try {
+      const data = await api('GET', `/api/admin/discover?q=${encodeURIComponent(q)}`);
+      if (data.error) throw new Error(data.error);
+
+      discoverResults = data.results || [];
+      badge.style.display = 'block';
+      badge.textContent = data.webSearch
+        ? '🌐 Results from live internet search'
+        : '🧠 Results from Eclat Universe knowledge base (add TAVILY_API_KEY for live search)';
+
+      if (!discoverResults.length) {
+        resultsEl.innerHTML = '<div style="color:#8A8AA0;font-size:14px;padding:20px;">No results found. Try a different search term.</div>';
+        return;
+      }
+
+      resultsEl.innerHTML = discoverResults.map((item, i) => {
+        const conf = item.confidence === 'high' ? '#00E5FF' : item.confidence === 'medium' ? '#F5A623' : '#8A8AA0';
+        const modules = (item.modules || []).join(', ') || 'TBD';
+        return `<div style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+            <div style="font-size:15px;font-weight:700;color:#F0F0FF;line-height:1.3;">${esc(item.hospital)}</div>
+            <span style="font-size:10px;font-weight:700;color:${conf};border:1px solid ${conf};border-radius:20px;padding:2px 8px;white-space:nowrap;">${esc(item.confidence || 'low').toUpperCase()}</span>
+          </div>
+          <div style="font-size:12px;color:#8A8AA0;">📍 ${esc(item.city || '')}, ${esc(item.state || 'US')}</div>
+          <div style="font-size:12px;color:#8A8AA0;">📅 ${esc(item.expectedDate || 'TBD')}</div>
+          <div style="font-size:12px;color:#8A8AA0;">🏥 ${esc(modules)}</div>
+          ${item.notes ? `<div style="font-size:12px;color:#8A8AA0;font-style:italic;">${esc(item.notes)}</div>` : ''}
+          ${item.source && item.source.startsWith('http') ? `<a href="${esc(item.source)}" target="_blank" style="font-size:11px;color:#00E5FF;text-decoration:none;">🔗 Source</a>` : item.source ? `<div style="font-size:11px;color:#8A8AA0;">📰 ${esc(item.source)}</div>` : ''}
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <button class="btn btn-orange" style="font-size:12px;padding:6px 14px;" onclick="addDiscoveredGoLive(${i})">+ Add Go-Live</button>
+            <button class="btn btn-ghost" style="font-size:12px;padding:6px 14px;" onclick="openAssignAfterAdd(${i})">+ Add &amp; Assign Team</button>
+          </div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      alertEl.className = 'alert alert-error';
+      alertEl.textContent = e.message;
+    } finally {
+      loading.style.display = 'none';
+    }
+  }
+
+  async function addDiscoveredGoLive(idx) {
+    const item = discoverResults[idx];
+    if (!item) return;
+    try {
+      const data = await api('POST', '/api/golives', {
+        name: item.hospital + (item.city ? ' — ' + item.city + ', ' + item.state : ''),
+        startDate: item.expectedDate && item.expectedDate.match(/\d{4}-\d{2}/) ? item.expectedDate + '-01' : new Date().toISOString().slice(0,10),
+        modules: item.modules || [],
+      });
+      if (data.error) throw new Error(data.error);
+      await loadGoLives();
+      await renderTeam();
+      showToast('Go-Live added: ' + data.name);
+      return data.id;
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  }
+
+  async function openAssignAfterAdd(idx) {
+    const goLiveId = await addDiscoveredGoLive(idx);
+    if (!goLiveId) return;
+    const item = discoverResults[idx];
+    openAssignModal(goLiveId, item.hospital + (item.city ? ' — ' + item.city + ', ' + item.state : ''));
+  }
+
+  function openAssignModal(goLiveId, goLiveName) {
+    assignTarget = { goLiveId, goLiveName };
+    document.getElementById('assign-modal-title').textContent = 'Assign Team to Go-Live';
+    document.getElementById('assign-modal-sub').textContent = goLiveName;
+    const list = document.getElementById('assign-user-list');
+    list.innerHTML = teamMembers.map(u => {
+      const assigned = (u.assignedGoLives || []).includes(goLiveId);
+      return `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;background:#0D0D1A;border:1px solid #1E1E2E;border-radius:10px;padding:10px 14px;">
+        <input type="checkbox" data-uid="${esc(u.id)}" ${assigned ? 'checked' : ''} style="accent-color:#00E5FF;width:16px;height:16px;" />
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#F0F0FF;">${esc(u.name)}</div>
+          <div style="font-size:11px;color:#8A8AA0;">${esc(u.email)} · ${esc(u.role)}</div>
+        </div>
+      </label>`;
+    }).join('') || '<div style="color:#8A8AA0;font-size:13px;">No team members yet. Add some from the Team tab.</div>';
+    document.getElementById('assign-modal').style.display = 'flex';
+  }
+
+  function closeAssignModal() {
+    document.getElementById('assign-modal').style.display = 'none';
+    assignTarget = null;
+  }
+
+  async function saveAssignments() {
+    if (!assignTarget) return;
+    const checks = document.querySelectorAll('#assign-user-list input[type=checkbox]');
+    const errors = [];
+    for (const cb of checks) {
+      const uid = cb.dataset.uid;
+      const user = teamMembers.find(u => u.id === uid);
+      if (!user) continue;
+      const current = user.assignedGoLives || [];
+      let updated;
+      if (cb.checked && !current.includes(assignTarget.goLiveId)) {
+        updated = [...current, assignTarget.goLiveId];
+      } else if (!cb.checked && current.includes(assignTarget.goLiveId)) {
+        updated = current.filter(id => id !== assignTarget.goLiveId);
+      } else continue;
+      try {
+        await api('PATCH', `/api/admin/team/${uid}/assign-golives`, { assignedGoLives: updated });
+        user.assignedGoLives = updated;
+      } catch (e) { errors.push(user.name); }
+    }
+    closeAssignModal();
+    await renderTeam();
+    if (errors.length) alert('Failed to update: ' + errors.join(', '));
+    else showToast('Team assignments saved');
+  }
+
+  function showToast(msg) {
+    const t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#00E5FF;color:#000;font-weight:700;font-size:13px;padding:12px 20px;border-radius:12px;z-index:9999;box-shadow:0 4px 20px rgba(0,229,255,.3);';
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+
 </script>
 </body>
 </html>

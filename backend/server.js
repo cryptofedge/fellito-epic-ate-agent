@@ -61,7 +61,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v36';
+const CACHE = 'fellito-v37';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -212,6 +212,62 @@ app.post('/api/admin/team/:id/unbind-device', requireOwner, (req, res) => {
   try {
     const updated = updateTeamMember(req.params.id, { boundDeviceId: null });
     res.json({ ok: true, user: updated });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ─── Go-Live Discovery (internet search via Tavily + Claude) ─────────────────
+app.get('/api/admin/discover', requireOwner, async (req, res) => {
+  const query = (req.query.q || 'Epic EHR go-live implementation 2025 United States hospital').trim();
+  let webResults = '';
+
+  // Try Tavily if key is set
+  if (process.env.TAVILY_API_KEY) {
+    try {
+      const tvRes = await fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_key: process.env.TAVILY_API_KEY,
+          query: query + ' Epic EHR go-live hospital',
+          search_depth: 'basic',
+          max_results: 8,
+          include_answer: false,
+        }),
+      });
+      const tvData = await tvRes.json();
+      if (tvData.results?.length) {
+        webResults = tvData.results.map(r => `Title: ${r.title}\nURL: ${r.url}\nSnippet: ${r.content?.slice(0, 300)}`).join('\n\n');
+      }
+    } catch (_) {}
+  }
+
+  const prompt = webResults
+    ? `You are an Epic EHR go-live intelligence analyst. Based on these real web search results, extract upcoming Epic EHR go-live events in the United States:\n\n${webResults}\n\nReturn ONLY valid JSON, no markdown:\n{"results":[{"hospital":"Hospital Name","city":"City","state":"ST","modules":["Module1"],"expectedDate":"YYYY-MM or Q1 2025 or TBD","source":"URL or publication","confidence":"high|medium|low","notes":"brief context"}]}`
+    : `You are an Epic EHR go-live intelligence analyst. List ${query.toLowerCase().includes('epic') ? '' : 'Epic EHR '}upcoming or recently announced hospital/health system go-live implementations in the United States matching this search: "${query}". Use your training knowledge through early 2025.\n\nReturn ONLY valid JSON, no markdown:\n{"results":[{"hospital":"Hospital Name","city":"City","state":"ST","modules":["Module1"],"expectedDate":"YYYY-MM or Q1 2025 or TBD","source":"press release / news / announcement","confidence":"high|medium|low","notes":"brief context"}]}`;
+
+  try {
+    const msg = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1800,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const raw = msg.content[0].text.trim().replace(/^```json\s*/,'').replace(/```\s*$/,'').trim();
+    const json = JSON.parse(raw);
+    res.json({ ...json, webSearch: !!webResults });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── Assign go-lives to a team member ────────────────────────────────────────
+app.patch('/api/admin/team/:id/assign-golives', requireOwner, (req, res) => {
+  try {
+    const { assignedGoLives } = req.body;
+    if (!Array.isArray(assignedGoLives)) return res.status(400).json({ error: 'assignedGoLives must be array' });
+    const updated = updateTeamMember(req.params.id, { assignedGoLives });
+    res.json(updated);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
