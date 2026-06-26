@@ -61,7 +61,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v31';
+const CACHE = 'fellito-v32';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -721,10 +721,18 @@ app.delete('/api/adoption/:id', requireAuth, (req, res) => {
 
 // ─── Tip Sheet Generator ─────────────────────────────────────────────────────
 app.post('/api/tipsheet', requireAuth, async (req, res) => {
-  const { moduleTag, dept, goLive } = req.body;
+  const { moduleTag, dept, goLive, goLiveId } = req.body;
   if (!moduleTag) return res.status(400).json({ error: 'moduleTag required' });
 
-  const prompt = `You are FELLITO — a 13-year Epic Credentialed Trainer. Generate a concise Go-Live Tip Sheet for Epic ${moduleTag}${dept ? ' in the ' + dept + ' department' : ''}${goLive ? ' for the ' + goLive + ' go-live' : ''}.
+  // Pull Go-Live-specific workflow docs from RAG
+  const ragQuery = `${moduleTag} workflow steps tips pitfalls escalation${dept ? ' ' + dept : ''}`;
+  const ragContext = goLiveId ? await queryDocuments(ragQuery, goLiveId, 6, moduleTag) : '';
+
+  const contextSection = ragContext
+    ? `\n\nGO-LIVE SPECIFIC CONTEXT (from uploaded workflow docs — prioritize this):\n${ragContext}\n`
+    : '';
+
+  const prompt = `You are FELLITO — a 13-year Epic Credentialed Trainer. Generate a concise Go-Live Tip Sheet for Epic ${moduleTag}${dept ? ' in the ' + dept + ' department' : ''}${goLive ? ' for the ' + goLive + ' go-live' : ''}.${contextSection}
 
 Format the tip sheet EXACTLY like this (use these exact section headers):
 
@@ -753,7 +761,7 @@ Format the tip sheet EXACTLY like this (use these exact section headers):
 • [scenario]
 
 Rules:
-- Be specific to ${moduleTag}${dept ? ' / ' + dept : ''} — no generic Epic advice
+- ${ragContext ? 'GROUND your tips in the provided Go-Live workflow docs above — real site-specific steps, not generic Epic advice' : 'Be specific to ' + moduleTag + (dept ? ' / ' + dept : '') + ' — no generic Epic advice'}
 - Floor-level language, not textbook
 - Each bullet max 15 words
 - No intro, no outro, no preamble — start with 🔑 immediately`;
@@ -764,7 +772,7 @@ Rules:
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
     });
-    res.json({ content: msg.content[0].text });
+    res.json({ content: msg.content[0].text, ragUsed: !!ragContext });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -772,13 +780,21 @@ Rules:
 
 // ─── Pre-Go-Live Quiz ────────────────────────────────────────────────────────
 app.post('/api/quiz', requireAuth, async (req, res) => {
-  const { moduleTag, dept } = req.body;
+  const { moduleTag, dept, goLiveId } = req.body;
   if (!moduleTag) return res.status(400).json({ error: 'moduleTag required' });
 
-  const prompt = `You are FELLITO, a 13-year Epic consultant. Generate exactly 5 multiple-choice quiz questions to test a consultant before they go live on Epic ${moduleTag} in the ${dept || 'hospital'} department.
+  // Pull Go-Live-specific workflow docs from RAG
+  const ragQuery = `${moduleTag} workflow steps procedures common mistakes${dept ? ' ' + dept : ''}`;
+  const ragContext = goLiveId ? await queryDocuments(ragQuery, goLiveId, 6, moduleTag) : '';
+
+  const contextSection = ragContext
+    ? `\n\nGO-LIVE SPECIFIC WORKFLOW DOCS (base your questions on these — this is the real site):\n${ragContext}\n`
+    : '';
+
+  const prompt = `You are FELLITO, a 13-year Epic consultant. Generate exactly 5 multiple-choice quiz questions to test a consultant before they go live on Epic ${moduleTag} in the ${dept || 'hospital'} department.${contextSection}
 
 Rules:
-- Questions must be practical, floor-level — things that actually trip up consultants on Day 1
+- ${ragContext ? 'Questions MUST be grounded in the provided workflow docs above — test knowledge of the actual site-specific steps and gotchas' : 'Questions must be practical, floor-level — things that actually trip up consultants on Day 1'}
 - Each question has exactly 4 options (A, B, C, D)
 - One correct answer per question
 - Include a short explanation (1-2 sentences) for the correct answer
@@ -2128,7 +2144,7 @@ async function openQuiz() {
     const r = await fetch('/api/quiz', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
-      body: JSON.stringify({ moduleTag: selectedModule, dept: selectedDept }),
+      body: JSON.stringify({ moduleTag: selectedModule, dept: selectedDept, goLiveId: selectedGoLiveId || null }),
     });
     const data = await r.json();
     if (!r.ok || !data.questions) throw new Error(data.error || 'No questions returned');
@@ -2246,7 +2262,7 @@ async function generateTipSheet() {
     const r = await fetch('/api/tipsheet', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
-      body: JSON.stringify({ moduleTag: selectedModule, dept: selectedDept, goLive: selectedGoLive })
+      body: JSON.stringify({ moduleTag: selectedModule, dept: selectedDept, goLive: selectedGoLive, goLiveId: selectedGoLiveId || null })
     });
     const data = await r.json();
     if (!r.ok || data.error) throw new Error(data.error || 'Generation failed');
