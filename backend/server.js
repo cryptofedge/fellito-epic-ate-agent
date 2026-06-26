@@ -104,6 +104,18 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+app.post('/api/auth/register', async (req, res) => {
+  const { name, email, password } = req.body;
+  if (!name || !email || !password) return res.status(400).json({ error: 'Name, email, and password required' });
+  try {
+    await inviteContributor({ name, email, password, assignedGoLives: [] });
+    const result = await login(email, password, req.headers['x-device-id'] ?? null);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // ─── Admin: current user ──────────────────────────────────────────────────────
 app.get('/api/admin/me', requireAuth, (req, res) => {
   const { id, email, name, role, assignedGoLives } = req.user;
