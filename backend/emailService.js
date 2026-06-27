@@ -24,6 +24,9 @@ async function nodemailerSend({ to, subject, html }) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: { user, pass },
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 8000,
   });
   await transporter.sendMail({ from: `"FELLITO · Eclat Universe" <${user}>`, to, subject, html });
 }
