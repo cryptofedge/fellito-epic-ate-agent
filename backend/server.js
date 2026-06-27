@@ -61,7 +61,7 @@ app.get('/sw.js', (_req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`
-const CACHE = 'fellito-v47';
+const CACHE = 'fellito-v48';
 const PRECACHE = ['/public/icon-192.png', '/public/icon-512.png', '/public/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -246,6 +246,52 @@ app.get('/api/admin/discover', requireOwner, async (req, res) => {
   const prompt = webResults
     ? `You are an Epic EHR go-live intelligence analyst. Based on these real web search results, extract upcoming Epic EHR go-live events in the United States:\n\n${webResults}\n\nReturn ONLY valid JSON, no markdown:\n{"results":[{"hospital":"Hospital Name","city":"City","state":"ST","modules":["Module1"],"expectedDate":"YYYY-MM or Q1 2025 or TBD","source":"URL or publication","confidence":"high|medium|low","notes":"brief context"}]}`
     : `You are an Epic EHR go-live intelligence analyst. List ${query.toLowerCase().includes('epic') ? '' : 'Epic EHR '}upcoming or recently announced hospital/health system go-live implementations in the United States matching this search: "${query}". Use your training knowledge through early 2025.\n\nReturn ONLY valid JSON, no markdown:\n{"results":[{"hospital":"Hospital Name","city":"City","state":"ST","modules":["Module1"],"expectedDate":"YYYY-MM or Q1 2025 or TBD","source":"press release / news / announcement","confidence":"high|medium|low","notes":"brief context"}]}`;
+
+  try {
+    const msg = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1800,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const text = msg.content[0].text;
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start === -1 || end === -1) throw new Error('No JSON object in response');
+    const json = JSON.parse(text.slice(start, end + 1));
+    res.json({ ...json, webSearch: !!webResults });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── Job Discovery (Epic ATE consultant jobs from web) ───────────────────────
+app.get('/api/admin/discover-jobs', requireOwner, async (req, res) => {
+  const query = (req.query.q || 'Epic EHR ATE analyst consultant contract job 2025').trim();
+  let webResults = '';
+
+  if (process.env.TAVILY_API_KEY) {
+    try {
+      const tvRes = await fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_key: process.env.TAVILY_API_KEY,
+          query: query + ' site:indeed.com OR site:linkedin.com OR site:dice.com OR site:healthcareit.com',
+          search_depth: 'basic',
+          max_results: 10,
+          include_answer: false,
+        }),
+      });
+      const tvData = await tvRes.json();
+      if (tvData.results?.length) {
+        webResults = tvData.results.map(r => `Title: ${r.title}\nURL: ${r.url}\nSnippet: ${r.content?.slice(0, 300)}`).join('\n\n');
+      }
+    } catch (_) {}
+  }
+
+  const prompt = webResults
+    ? `You are an Epic EHR staffing analyst. Based on these real job search results, extract Epic EHR ATE/analyst/consultant job postings:\n\n${webResults}\n\nReturn ONLY valid JSON, no markdown:\n{"jobs":[{"title":"Job Title","company":"Company/Hospital","city":"City","state":"ST","type":"Contract|Full-time|Part-time","rate":"$XX/hr or $XXk/yr or TBD","modules":["Module1"],"applyUrl":"URL or null","source":"Indeed|LinkedIn|Dice|etc","posted":"YYYY-MM-DD or TBD","notes":"brief context"}]}`
+    : `You are an Epic EHR staffing analyst. List current or recent Epic EHR ATE analyst/consultant/trainer job postings in the United States matching: "${query}". Use your training knowledge.\n\nReturn ONLY valid JSON, no markdown:\n{"jobs":[{"title":"Job Title","company":"Company/Hospital","city":"City","state":"ST","type":"Contract|Full-time|Part-time","rate":"$XX/hr or $XXk/yr or TBD","modules":["Module1"],"applyUrl":null,"source":"Indeed|LinkedIn|Dice","posted":"TBD","notes":"brief context"}]}`;
 
   try {
     const msg = await anthropic.messages.create({

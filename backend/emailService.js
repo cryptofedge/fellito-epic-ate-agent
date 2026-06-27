@@ -174,6 +174,12 @@ async function sendGoLiveOpportunityEmail({ toEmail, toName, opportunities, sent
         <div style="color:#8A8AA0;font-size:12px;margin-top:4px;">🏥 ${modules}</div>
         ${o.notes ? `<div style="color:#8A8AA0;font-size:12px;font-style:italic;margin-top:6px;">${o.notes}</div>` : ''}
         ${o.source && !o.source.startsWith('http') ? `<div style="color:#8A8AA0;font-size:11px;margin-top:4px;">📰 ${o.source}</div>` : ''}
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px;"><tr>
+          <td>
+            <a href="${process.env.BASE_URL || 'https://fellito-epic-ate-agent.onrender.com'}" style="display:inline-block;background:#00E5FF;color:#000;font-size:12px;font-weight:800;letter-spacing:1px;text-decoration:none;border-radius:10px;padding:10px 22px;">Apply Now →</a>
+          </td>
+          ${o.source && o.source.startsWith('http') ? `<td align="right"><a href="${o.source}" style="display:inline-block;color:#00E5FF;font-size:12px;text-decoration:none;border:1px solid #1E1E2E;border-radius:10px;padding:10px 16px;">View Source ↗</a></td>` : ''}
+        </tr></table>
       </td></tr>
     </table>`;
   }).join('');
