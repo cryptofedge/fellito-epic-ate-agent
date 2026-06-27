@@ -217,6 +217,7 @@
     <div class="nav-item" id="nav-security" onclick="showPage('security')">🚩 Security Flags</div>
     <div class="nav-item" id="nav-team" onclick="showPage('team')" style="display:none">👥 Team</div>
     <div class="nav-item" id="nav-discover" onclick="showPage('discover')">🔍 Discover Go-Lives</div>
+    <div class="nav-item" id="nav-scorecard" onclick="showPage('scorecard')">🏆 Scorecard</div>
 
     <div class="sidebar-spacer"></div>
     <div class="sidebar-user">
@@ -575,6 +576,55 @@
 
       <div id="discover-results" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;"></div>
       <div id="discover-jobs-results" style="display:none;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;"></div>
+    </div>
+
+    <!-- ── CONSULTANT SCORECARD ── -->
+    <div id="page-scorecard" class="page">
+      <div class="page-title">🏆 Consultant Scorecard</div>
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap;">
+        <button class="btn btn-orange" onclick="loadScorecard()">🔄 Refresh</button>
+        <span id="scorecard-last-updated" style="font-size:12px;color:#8A8AA0;"></span>
+      </div>
+      <div id="scorecard-alert" class="alert"></div>
+
+      <!-- Summary stats bar -->
+      <div id="scorecard-summary" style="display:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px;"></div>
+
+      <!-- Leaderboard table -->
+      <div id="scorecard-table-wrap" style="display:none;background:#0D0D1A;border:1px solid #2A2A3E;border-radius:16px;overflow:hidden;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background:#0A0A0F;border-bottom:1px solid #2A2A3E;">
+              <th style="padding:12px 16px;text-align:left;font-size:11px;color:#8A8AA0;letter-spacing:1px;font-weight:700;">RANK</th>
+              <th style="padding:12px 16px;text-align:left;font-size:11px;color:#8A8AA0;letter-spacing:1px;font-weight:700;">CONSULTANT</th>
+              <th style="padding:12px 16px;text-align:center;font-size:11px;color:#8A8AA0;letter-spacing:1px;font-weight:700;">SHIFTS</th>
+              <th style="padding:12px 16px;text-align:center;font-size:11px;color:#8A8AA0;letter-spacing:1px;font-weight:700;">QUESTIONS</th>
+              <th style="padding:12px 16px;text-align:center;font-size:11px;color:#8A8AA0;letter-spacing:1px;font-weight:700;">AVG / SHIFT</th>
+              <th style="padding:12px 16px;text-align:center;font-size:11px;color:#8A8AA0;letter-spacing:1px;font-weight:700;">ESCALATIONS</th>
+              <th style="padding:12px 16px;text-align:center;font-size:11px;color:#8A8AA0;letter-spacing:1px;font-weight:700;">GO-LIVES</th>
+              <th style="padding:12px 16px;text-align:center;font-size:11px;color:#8A8AA0;letter-spacing:1px;font-weight:700;">MODULES</th>
+              <th style="padding:12px 16px;text-align:left;font-size:11px;color:#8A8AA0;letter-spacing:1px;font-weight:700;">LAST ACTIVE</th>
+            </tr>
+          </thead>
+          <tbody id="scorecard-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Empty state -->
+      <div id="scorecard-empty" style="display:none;text-align:center;padding:60px 20px;color:#8A8AA0;">
+        <div style="font-size:40px;margin-bottom:12px;">📋</div>
+        <div style="font-size:16px;font-weight:700;color:#F0F0FF;margin-bottom:8px;">No shift data yet</div>
+        <div style="font-size:13px;">Scorecard populates automatically as consultants submit shift logs.</div>
+      </div>
+
+      <!-- Drill-down drawer -->
+      <div id="scorecard-drawer" style="display:none;margin-top:24px;background:#0D0D1A;border:1px solid #2A2A3E;border-radius:16px;padding:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div id="scorecard-drawer-name" style="font-size:16px;font-weight:700;color:#F0F0FF;"></div>
+          <button onclick="closeDrawer()" style="background:none;border:1px solid #2A2A3E;border-radius:20px;color:#8A8AA0;font-size:12px;font-weight:700;padding:5px 14px;cursor:pointer;">✕ Close</button>
+        </div>
+        <div id="scorecard-drawer-body" style="font-size:13px;color:#8A8AA0;line-height:1.7;"></div>
+      </div>
     </div>
 
     <!-- ── SEND GO-LIVE OPPORTUNITY MODAL ── -->
@@ -970,6 +1020,7 @@
     if (name === 'invites') { populateInviteGoLiveDropdown(); loadInviteLinks(); }
     if (name === 'admin-links') loadAdminLinks();
     if (name === 'security') loadSecurityFlags();
+    if (name === 'scorecard') loadScorecard();
   }
 
   // ─── Data loading ─────────────────────────────────────────────────────────
@@ -2051,6 +2102,116 @@
     t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#00E5FF;color:#000;font-weight:700;font-size:13px;padding:12px 20px;border-radius:12px;z-index:9999;box-shadow:0 4px 20px rgba(0,229,255,.3);';
     document.body.appendChild(t);
     setTimeout(() => t.remove(), 3000);
+  }
+
+  // ── SCORECARD ──────────────────────────────────────────────────────────────
+
+  async function loadScorecard() {
+    document.getElementById('scorecard-alert').style.display = 'none';
+    document.getElementById('scorecard-summary').style.display = 'none';
+    document.getElementById('scorecard-table-wrap').style.display = 'none';
+    document.getElementById('scorecard-empty').style.display = 'none';
+    document.getElementById('scorecard-drawer').style.display = 'none';
+    document.getElementById('scorecard-last-updated').textContent = 'Loading…';
+
+    try {
+      const data = await api('GET', '/api/admin/scorecard');
+      document.getElementById('scorecard-last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+      if (!data || data.length === 0) {
+        document.getElementById('scorecard-empty').style.display = 'block';
+        return;
+      }
+
+      // Summary bar
+      const totalShifts = data.reduce((s, c) => s + c.shifts, 0);
+      const totalQ = data.reduce((s, c) => s + c.questionsAnswered, 0);
+      const totalEsc = data.reduce((s, c) => s + c.issuesEscalated, 0);
+      const allGoLives = new Set(data.flatMap(c => c.goLives));
+      const summary = document.getElementById('scorecard-summary');
+      summary.innerHTML = [
+        { label: 'CONSULTANTS', value: data.length, color: '#00E5FF' },
+        { label: 'TOTAL SHIFTS', value: totalShifts, color: '#B388FF' },
+        { label: 'QUESTIONS ANSWERED', value: totalQ, color: '#69FF47' },
+        { label: 'ESCALATIONS', value: totalEsc, color: '#FF6B6B' },
+        { label: 'GO-LIVES COVERED', value: allGoLives.size, color: '#FFD600' },
+      ].map(s => `
+        <div style="background:#0A0A0F;border:1px solid #2A2A3E;border-radius:12px;padding:16px 18px;">
+          <div style="font-size:11px;color:#8A8AA0;letter-spacing:1px;font-weight:700;margin-bottom:6px;">${s.label}</div>
+          <div style="font-size:28px;font-weight:800;color:${s.color};">${s.value}</div>
+        </div>`).join('');
+      summary.style.display = 'grid';
+
+      // Medal helper
+      const medals = ['🥇', '🥈', '🥉'];
+
+      // Store data globally so rows can reference by index
+      window._scorecardData = data;
+
+      // Table rows
+      const tbody = document.getElementById('scorecard-tbody');
+      tbody.innerHTML = data.map((c, i) => {
+        const lastActive = c.lastActive ? new Date(c.lastActive).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '—';
+        const escalPct = c.shifts ? Math.round((c.issuesEscalated / c.shifts) * 10) / 10 : 0;
+        const escalColor = escalPct > 3 ? '#FF6B6B' : escalPct > 1 ? '#FFD600' : '#69FF47';
+        const rank = i < 3 ? medals[i] : `#${i + 1}`;
+        return `<tr style="border-bottom:1px solid #1E1E2E;cursor:pointer;transition:background .15s;"
+                    onmouseover="this.style.background='#12121F'"
+                    onmouseout="this.style.background=''"
+                    onclick="openDrawer(${i})">
+          <td style="padding:14px 16px;font-size:16px;text-align:left;">${rank}</td>
+          <td style="padding:14px 16px;">
+            <div style="font-size:14px;font-weight:700;color:#F0F0FF;">${c.name}</div>
+            <div style="font-size:11px;color:#8A8AA0;">${c.email}</div>
+          </td>
+          <td style="padding:14px 16px;text-align:center;font-size:14px;font-weight:700;color:#B388FF;">${c.shifts}</td>
+          <td style="padding:14px 16px;text-align:center;font-size:14px;font-weight:700;color:#69FF47;">${c.questionsAnswered}</td>
+          <td style="padding:14px 16px;text-align:center;font-size:14px;font-weight:700;color:#00E5FF;">${c.avgQuestionsPerShift}</td>
+          <td style="padding:14px 16px;text-align:center;font-size:14px;font-weight:700;color:${escalColor};">${c.issuesEscalated}</td>
+          <td style="padding:14px 16px;text-align:center;font-size:13px;color:#8A8AA0;">${c.goLives.slice(0,2).join(', ')}${c.goLives.length > 2 ? ' +' + (c.goLives.length - 2) + ' more' : ''}</td>
+          <td style="padding:14px 16px;text-align:center;font-size:13px;color:#8A8AA0;">${c.modules.slice(0,2).join(', ')}${c.modules.length > 2 ? ' +' + (c.modules.length - 2) : ''}</td>
+          <td style="padding:14px 16px;font-size:12px;color:#8A8AA0;">${lastActive}</td>
+        </tr>`;
+      }).join('');
+
+      document.getElementById('scorecard-table-wrap').style.display = 'block';
+    } catch (e) {
+      const al = document.getElementById('scorecard-alert');
+      al.textContent = 'Failed to load scorecard: ' + e.message;
+      al.style.display = 'block';
+      document.getElementById('scorecard-last-updated').textContent = '';
+    }
+  }
+
+  function openDrawer(i) {
+    const c = (window._scorecardData || [])[i];
+    if (!c) return;
+    document.getElementById('scorecard-drawer-name').textContent = c.name + ' — Performance Detail';
+    const goLivesList = c.goLives.length ? c.goLives.map(g => `<span style="background:#0A0A0F;border:1px solid #2A2A3E;border-radius:8px;padding:3px 10px;font-size:12px;color:#F0F0FF;margin:2px;">${g}</span>`).join(' ') : '<span style="color:#8A8AA0;">—</span>';
+    const modulesList = c.modules.length ? c.modules.map(m => `<span style="background:#0A0A0F;border:1px solid #00E5FF33;border-radius:8px;padding:3px 10px;font-size:12px;color:#00E5FF;margin:2px;">${m}</span>`).join(' ') : '<span style="color:#8A8AA0;">—</span>';
+    const summaries = c.recentSummaries.length ? c.recentSummaries.map((s, i) => `<div style="border-left:2px solid #2A2A3E;padding-left:12px;margin-bottom:10px;font-size:12px;color:#C0C0D0;">${s}</div>`).join('') : '<span style="color:#8A8AA0;">No summaries yet</span>';
+
+    document.getElementById('scorecard-drawer-body').innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px;">
+        ${[
+          { l: 'SHIFTS', v: c.shifts, col: '#B388FF' },
+          { l: 'QUESTIONS', v: c.questionsAnswered, col: '#69FF47' },
+          { l: 'AVG / SHIFT', v: c.avgQuestionsPerShift, col: '#00E5FF' },
+          { l: 'ESCALATIONS', v: c.issuesEscalated, col: '#FF6B6B' },
+        ].map(s => `<div style="background:#0A0A0F;border:1px solid #2A2A3E;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:10px;color:#8A8AA0;letter-spacing:1px;font-weight:700;margin-bottom:4px;">${s.l}</div>
+          <div style="font-size:22px;font-weight:800;color:${s.col};">${s.v}</div>
+        </div>`).join('')}
+      </div>
+      <div style="margin-bottom:14px;"><div style="font-size:11px;color:#8A8AA0;letter-spacing:1px;font-weight:700;margin-bottom:8px;">GO-LIVES WORKED</div>${goLivesList}</div>
+      <div style="margin-bottom:14px;"><div style="font-size:11px;color:#8A8AA0;letter-spacing:1px;font-weight:700;margin-bottom:8px;">MODULES</div>${modulesList}</div>
+      <div><div style="font-size:11px;color:#8A8AA0;letter-spacing:1px;font-weight:700;margin-bottom:8px;">RECENT SHIFT SUMMARIES</div>${summaries}</div>`;
+    document.getElementById('scorecard-drawer').style.display = 'block';
+    document.getElementById('scorecard-drawer').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function closeDrawer() {
+    document.getElementById('scorecard-drawer').style.display = 'none';
   }
 
 </script>

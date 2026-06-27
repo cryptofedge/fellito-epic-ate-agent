@@ -17,6 +17,7 @@ const { listLinks, ingestLink, deleteLink } = require('./linksEngine');
 const { updateMemory, buildMemoryContext, addInsight, listAllMemory, closeSession } = require('./memoryEngine');
 const { createTempLink, listTempLinks, openLink, revokeTempLink, validateTempSession, SESSION_TTL_MS } = require('./tempLinkStore');
 const { sendInviteEmail, sendShiftEmail, sendGoLiveOpportunityEmail } = require('./emailService');
+const { logShift, listShifts, getScorecard } = require('./shiftStore');
 const cookieParser = require('cookie-parser');
 const { signToken } = require('./authEngine');
 const { DATA_DIR, UPLOAD_DIR } = require('./storagePaths');
@@ -262,6 +263,18 @@ app.get('/api/admin/discover', requireOwner, async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// ─── Consultant Scorecard ─────────────────────────────────────────────────────
+
+app.get('/api/admin/scorecard', requireOwner, (_req, res) => {
+  try { res.json(getScorecard()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/admin/shifts', requireOwner, (req, res) => {
+  try { res.json(listShifts(req.query)); }
+  catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ─── Job Discovery (Epic ATE consultant jobs from web) ───────────────────────
@@ -997,11 +1010,21 @@ Return ONLY this JSON, no extra text, no markdown:
 // ─── Shift Log ───────────────────────────────────────────────────────────────
 app.post('/api/shift/end', requireAuth, async (req, res) => {
   try {
-    const { goLive, dept, module: mod, questionsAnswered, issuesEscalated, issues, summary, pmEmail, pmName } = req.body;
-    const consultant = req.user.email || req.user.name || 'Consultant';
+    const { goLive, goLiveId, dept, module: mod, questionsAnswered, issuesEscalated, issues, summary, pmEmail, pmName } = req.body;
+    const consultant = req.user.name || req.user.email || 'Consultant';
     const date = new Date().toLocaleDateString('en-US', { weekday:'short', year:'numeric', month:'short', day:'numeric' });
 
     if (!pmEmail) return res.status(400).json({ error: 'PM email required' });
+
+    // Persist shift record
+    logShift({
+      userId: req.user.id,
+      consultantName: consultant,
+      consultantEmail: req.user.email,
+      goLive: goLive || 'Unknown Go-Live',
+      goLiveId: goLiveId || null,
+      dept, module: mod, questionsAnswered, issuesEscalated, issues, summary, pmEmail, pmName,
+    });
 
     await sendShiftEmail({
       toEmail: pmEmail, pmName, consultant, goLive: goLive || 'Unknown Go-Live',
