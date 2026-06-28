@@ -712,8 +712,10 @@ app.post('/api/admin/send-welcome', requireOwner, async (req, res) => {
   if (!toEmail) return res.status(400).json({ error: 'toEmail required' });
   try {
     const base = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || 'https://fellito-epic-ate-agent.onrender.com';
-    await sendWelcomeGuideEmail({ toEmail, toName, loginUrl: base, guideUrl: base + '/portal-guide' });
-    res.json({ ok: true });
+    const link = createTempLink({ label: toName || toEmail });
+    const inviteUrl = base + '/temp/' + link.token;
+    await sendWelcomeGuideEmail({ toEmail, toName, loginUrl: base, guideUrl: base + '/portal-guide', inviteUrl });
+    res.json({ ok: true, inviteUrl });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

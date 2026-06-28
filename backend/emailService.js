@@ -217,10 +217,11 @@ async function sendGoLiveOpportunityEmail({ toEmail, toName, opportunities, sent
   });
 }
 
-async function sendWelcomeGuideEmail({ toEmail, toName, loginUrl, guideUrl }) {
+async function sendWelcomeGuideEmail({ toEmail, toName, loginUrl, guideUrl, inviteUrl }) {
   const name = toName || toEmail;
   const portal = loginUrl || process.env.BASE_URL || 'https://fellito-epic-ate-agent.onrender.com';
   const guide = guideUrl || (portal + '/portal-guide');
+  const accessUrl = inviteUrl || portal;
 
   await send({
     to: toEmail,
@@ -252,10 +253,10 @@ async function sendWelcomeGuideEmail({ toEmail, toName, loginUrl, guideUrl }) {
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr><td align="center" style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:14px;padding:24px;">
         <div style="font-size:11px;color:#8A8AA0;letter-spacing:2px;margin-bottom:14px;font-weight:700;">YOUR PORTAL ACCESS</div>
-        <a href="${portal}" style="display:inline-block;background:linear-gradient(135deg,#00E5FF,#00B4CC);color:#000;font-size:15px;font-weight:800;letter-spacing:1px;text-decoration:none;border-radius:14px;padding:16px 40px;box-shadow:0 0 24px rgba(0,229,255,.2);">
-          Open FELLITO Portal →
+        <a href="${accessUrl}" style="display:inline-block;background:linear-gradient(135deg,#00E5FF,#00B4CC);color:#000;font-size:15px;font-weight:800;letter-spacing:1px;text-decoration:none;border-radius:14px;padding:16px 40px;box-shadow:0 0 24px rgba(0,229,255,.2);">
+          Enter FELLITO →
         </a>
-        <div style="margin-top:12px;font-size:12px;color:#8A8AA0;">Sign in with: <span style="color:#F0F0FF;font-weight:600;">${toEmail}</span></div>
+        <div style="margin-top:12px;font-size:12px;color:#8A8AA0;">Tap the button above to go straight into your session — no password needed.</div>
       </td></tr>
     </table>
   </td></tr>
