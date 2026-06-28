@@ -16,7 +16,7 @@ const { listAdoption, upsertAdoption, deleteAdoptionRecord } = require('./adopti
 const { listLinks, ingestLink, deleteLink } = require('./linksEngine');
 const { updateMemory, buildMemoryContext, addInsight, listAllMemory, closeSession } = require('./memoryEngine');
 const { createTempLink, listTempLinks, openLink, revokeTempLink, validateTempSession, SESSION_TTL_MS } = require('./tempLinkStore');
-const { sendInviteEmail, sendShiftEmail, sendGoLiveOpportunityEmail } = require('./emailService');
+const { sendInviteEmail, sendShiftEmail, sendGoLiveOpportunityEmail, sendWelcomeGuideEmail } = require('./emailService');
 const { logShift, listShifts, getScorecard } = require('./shiftStore');
 const cookieParser = require('cookie-parser');
 const { signToken } = require('./authEngine');
@@ -92,6 +92,122 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const upload = multer({
   dest: UPLOAD_DIR,
   limits: { fileSize: 25 * 1024 * 1024 },
+});
+
+// ─── Portal Guide (branded downloadable instructions page) ───────────────────
+app.get('/portal-guide', (_req, res) => {
+  const BASE = process.env.BASE_URL || 'https://fellito-epic-ate-agent.onrender.com';
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>FELLITO Portal — Quick-Start Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#07070F;font-family:'Inter',sans-serif;color:#F0F0FF;min-height:100vh;padding:40px 20px;}
+  .card{max-width:780px;margin:0 auto;background:#0D0D1A;border:1.5px solid #1E1E2E;border-radius:24px;overflow:hidden;}
+  .header{background:linear-gradient(135deg,#07070F 0%,#0D0D2A 100%);padding:40px 48px 32px;border-bottom:1px solid #1E1E2E;position:relative;}
+  .header::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#00E5FF,#B388FF,#00E5FF);}
+  .logo{font-size:28px;font-weight:900;letter-spacing:2px;color:#00E5FF;margin-bottom:4px;}
+  .sub{font-size:13px;color:#8A8AA0;letter-spacing:2px;font-weight:600;text-transform:uppercase;}
+  .tagline{font-size:22px;font-weight:800;color:#F0F0FF;margin-top:18px;line-height:1.3;}
+  .body{padding:40px 48px;}
+  .steps-title{font-size:11px;font-weight:700;color:#00E5FF;letter-spacing:2px;margin-bottom:24px;}
+  .step{display:flex;gap:20px;margin-bottom:28px;align-items:flex-start;}
+  .step-num{min-width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#00E5FF22,#00E5FF44);border:1.5px solid #00E5FF;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#00E5FF;flex-shrink:0;}
+  .step-body{}
+  .step-title{font-size:15px;font-weight:700;color:#F0F0FF;margin-bottom:4px;}
+  .step-desc{font-size:13px;color:#8A8AA0;line-height:1.6;}
+  .step-desc a{color:#00E5FF;text-decoration:none;}
+  .step-tag{display:inline-block;background:#00E5FF18;border:1px solid #00E5FF44;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:#00E5FF;letter-spacing:1px;margin-top:6px;}
+  .divider{height:1px;background:#1E1E2E;margin:32px 0;}
+  .rules-title{font-size:11px;font-weight:700;color:#FF6B6B;letter-spacing:2px;margin-bottom:16px;}
+  .rule{display:flex;gap:12px;margin-bottom:12px;font-size:13px;color:#8A8AA0;line-height:1.5;}
+  .rule-icon{font-size:16px;flex-shrink:0;}
+  .cta{margin-top:36px;text-align:center;}
+  .cta-btn{display:inline-block;background:linear-gradient(135deg,#00E5FF,#00B4CC);color:#000;font-weight:800;font-size:15px;letter-spacing:1px;text-decoration:none;padding:16px 40px;border-radius:14px;box-shadow:0 0 32px rgba(0,229,255,.25);}
+  .footer{padding:24px 48px;border-top:1px solid #1E1E2E;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+  .footer-brand{font-size:12px;color:#8A8AA0;}
+  .footer-brand strong{color:#00E5FF;}
+  .print-btn{background:none;border:1px solid #2A2A3E;border-radius:20px;color:#8A8AA0;font-size:12px;font-weight:700;padding:7px 18px;cursor:pointer;letter-spacing:1px;}
+  @media print{.print-btn{display:none;}.card{border:none;box-shadow:none;} body{background:#fff;} .header,.body,.footer{color:#000;}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <div class="logo">FELLITO</div>
+    <div class="sub">Eclat Universe · Epic ATE Support Portal</div>
+    <div class="tagline">Your AI-powered go-live assistant.<br/>Here's how to get started.</div>
+  </div>
+  <div class="body">
+    <div class="steps-title">QUICK-START GUIDE — 5 STEPS</div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">Log In</div>
+        <div class="step-desc">Go to <a href="${BASE}" target="_blank">${BASE}</a> and sign in with the email and password from your invite. First time? Use the temporary password and change it right away under your profile.</div>
+        <span class="step-tag">LOGIN</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">Ask FELLITO Anything</div>
+        <div class="step-desc">Type your workflow question in the chat box. FELLITO has Epic ATE expertise built in — ask about department setups, common errors, best practices, or anything you'd normally escalate. You'll get an answer in seconds.</div>
+        <span class="step-tag">AI CHAT</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">Use the Knowledge Base</div>
+        <div class="step-desc">Your PM has uploaded go-live docs, tip sheets, and reference materials. Tap <strong style="color:#F0F0FF;">📄 Docs</strong> to browse them, or just ask FELLITO — it searches them automatically when answering your questions.</div>
+        <span class="step-tag">DOCS</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="step-title">Escalate an Issue</div>
+        <div class="step-desc">If you hit something FELLITO can't resolve, tap <strong style="color:#F0F0FF;">🚨 Report Issue</strong>. Describe what happened and it'll be flagged to your PM immediately. Don't try to handle clinical or security problems on your own.</div>
+        <span class="step-tag">ESCALATION</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="step-title">Log Your Shift</div>
+        <div class="step-desc">At the end of each shift, tap <strong style="color:#F0F0FF;">End Shift</strong> and fill in your summary — questions answered, any issues escalated, and notes. This feeds your performance scorecard so your work gets counted.</div>
+        <span class="step-tag">SHIFT LOG</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="rules-title">⚠ IMPORTANT RULES</div>
+    <div class="rule"><span class="rule-icon">🚫</span><span>Never enter patient names, MRNs, DOBs, or any clinical records into the chat. Workflow questions only.</span></div>
+    <div class="rule"><span class="rule-icon">🚫</span><span>Do not share your login credentials or access link with anyone.</span></div>
+    <div class="rule"><span class="rule-icon">✅</span><span>If you're unsure whether something is safe to ask — ask your PM first.</span></div>
+
+    <div class="cta">
+      <a href="${BASE}" class="cta-btn">Open FELLITO Portal →</a>
+    </div>
+  </div>
+  <div class="footer">
+    <div class="footer-brand">Powered by <strong>FELLITO · Eclat Universe</strong> — Epic ATE Support System</div>
+    <button class="print-btn" onclick="window.print()">🖨 Print / Save as PDF</button>
+  </div>
+</div>
+</body>
+</html>`);
 });
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -587,6 +703,19 @@ app.post('/api/invite', requireOwner, async (req, res) => {
     res.json({ ok: true, inviteUrl });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Send welcome guide email ─────────────────────────────────────────────────
+app.post('/api/admin/send-welcome', requireOwner, async (req, res) => {
+  const { toEmail, toName } = req.body;
+  if (!toEmail) return res.status(400).json({ error: 'toEmail required' });
+  try {
+    const base = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || 'https://fellito-epic-ate-agent.onrender.com';
+    await sendWelcomeGuideEmail({ toEmail, toName, loginUrl: base, guideUrl: base + '/portal-guide' });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 

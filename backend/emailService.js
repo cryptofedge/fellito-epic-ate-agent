@@ -217,4 +217,111 @@ async function sendGoLiveOpportunityEmail({ toEmail, toName, opportunities, sent
   });
 }
 
-module.exports = { sendInviteEmail, sendShiftEmail, sendGoLiveOpportunityEmail };
+async function sendWelcomeGuideEmail({ toEmail, toName, loginUrl, guideUrl }) {
+  const name = toName || toEmail;
+  const portal = loginUrl || process.env.BASE_URL || 'https://fellito-epic-ate-agent.onrender.com';
+  const guide = guideUrl || (portal + '/portal-guide');
+
+  await send({
+    to: toEmail,
+    subject: 'Welcome to FELLITO — Your Portal Access & Quick-Start Guide',
+    html: `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0A0A0F;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0F;padding:40px 20px;">
+<tr><td align="center">
+<table width="100%" style="max-width:520px;background:#12121A;border-radius:20px;border:1px solid #1E1E2E;overflow:hidden;">
+
+  <!-- Header -->
+  <tr><td style="background:linear-gradient(135deg,#001A2C,#002A40);padding:32px;text-align:center;position:relative;">
+    <div style="font-size:36px;font-weight:900;color:#00E5FF;letter-spacing:6px;margin-bottom:6px;">FELLITO</div>
+    <div style="font-size:11px;color:#8A8AA0;letter-spacing:3px;">ECLAT UNIVERSE · EPIC ATE SUPPORT PORTAL</div>
+    <div style="margin-top:18px;display:inline-block;background:#00E5FF18;border:1px solid #00E5FF44;border-radius:20px;padding:6px 18px;font-size:12px;font-weight:700;color:#00E5FF;letter-spacing:1px;">WELCOME ABOARD</div>
+  </td></tr>
+
+  <!-- Greeting -->
+  <tr><td style="padding:32px 32px 0;">
+    <p style="color:#fff;font-size:17px;font-weight:700;margin:0 0 10px;">Hey ${name} 👋</p>
+    <p style="color:#8A8AA0;font-size:14px;line-height:1.7;margin:0 0 28px;">
+      You're now part of the <strong style="color:#fff;">FELLITO</strong> team — your AI-powered Epic ATE go-live support system, built by <strong style="color:#00E5FF;">Eclat Universe</strong>. Use the portal to get instant answers, access go-live docs, escalate issues, and log your shift activity.
+    </p>
+  </td></tr>
+
+  <!-- Portal Access Button -->
+  <tr><td style="padding:0 32px 28px;">
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr><td align="center" style="background:#0A0A0F;border:1px solid #1E1E2E;border-radius:14px;padding:24px;">
+        <div style="font-size:11px;color:#8A8AA0;letter-spacing:2px;margin-bottom:14px;font-weight:700;">YOUR PORTAL ACCESS</div>
+        <a href="${portal}" style="display:inline-block;background:linear-gradient(135deg,#00E5FF,#00B4CC);color:#000;font-size:15px;font-weight:800;letter-spacing:1px;text-decoration:none;border-radius:14px;padding:16px 40px;box-shadow:0 0 24px rgba(0,229,255,.2);">
+          Open FELLITO Portal →
+        </a>
+        <div style="margin-top:12px;font-size:12px;color:#8A8AA0;">Sign in with: <span style="color:#F0F0FF;font-weight:600;">${toEmail}</span></div>
+      </td></tr>
+    </table>
+  </td></tr>
+
+  <!-- Divider -->
+  <tr><td style="padding:0 32px;"><div style="height:1px;background:#1E1E2E;"></div></td></tr>
+
+  <!-- 5 Steps inline -->
+  <tr><td style="padding:28px 32px 8px;">
+    <div style="font-size:11px;font-weight:700;color:#00E5FF;letter-spacing:2px;margin-bottom:20px;">HOW TO USE FELLITO — 5 STEPS</div>
+
+    ${[
+      ['1','Log In','Go to the portal and sign in with your email. Change your temporary password right away under your profile.','LOGIN'],
+      ['2','Ask FELLITO Anything','Type any Epic workflow question into chat. No need to wait on a colleague — get answers instantly.','AI CHAT'],
+      ['3','Use the Knowledge Base','Your PM has uploaded go-live docs and tip sheets. Tap 📄 Docs or just ask FELLITO — it searches them automatically.','DOCS'],
+      ['4','Escalate an Issue','If FELLITO can\'t resolve it, tap 🚨 Report Issue. Clinical and security problems go straight to your PM.','ESCALATION'],
+      ['5','Log Your Shift','End every shift by tapping End Shift, filling in questions answered, issues, and notes. It feeds your scorecard.','SHIFT LOG'],
+    ].map(([n,t,d,tag]) => `
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
+      <tr>
+        <td style="width:44px;vertical-align:top;padding-top:2px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:#00E5FF18;border:1.5px solid #00E5FF44;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#00E5FF;text-align:center;line-height:36px;">${n}</div>
+        </td>
+        <td style="vertical-align:top;">
+          <div style="font-size:14px;font-weight:700;color:#F0F0FF;margin-bottom:3px;">${t}</div>
+          <div style="font-size:12px;color:#8A8AA0;line-height:1.6;">${d}</div>
+          <div style="display:inline-block;margin-top:5px;background:#00E5FF12;border:1px solid #00E5FF33;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;color:#00E5FF;letter-spacing:1px;">${tag}</div>
+        </td>
+      </tr>
+    </table>`).join('')}
+  </td></tr>
+
+  <!-- Rules -->
+  <tr><td style="padding:0 32px 24px;">
+    <div style="background:#FF6B6B0D;border:1px solid #FF6B6B33;border-radius:12px;padding:16px 18px;">
+      <div style="font-size:11px;font-weight:700;color:#FF6B6B;letter-spacing:1px;margin-bottom:10px;">⚠ IMPORTANT RULES</div>
+      <div style="font-size:12px;color:#8A8AA0;line-height:1.8;">
+        🚫 Never enter patient names, MRNs, DOBs, or clinical records into chat — workflow questions only.<br>
+        🚫 Do not share your login or access link with anyone.<br>
+        ✅ When in doubt, ask your PM before acting.
+      </div>
+    </div>
+  </td></tr>
+
+  <!-- Download Guide CTA -->
+  <tr><td style="padding:0 32px 32px;">
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr><td align="center" style="background:#0A0A0F;border:1px solid #2A2A3E;border-radius:14px;padding:20px;">
+        <div style="font-size:12px;color:#8A8AA0;margin-bottom:12px;">Save this as a reference for your first shift</div>
+        <a href="${guide}" target="_blank" style="display:inline-block;border:1.5px solid #00E5FF;color:#00E5FF;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;border-radius:12px;padding:12px 28px;">
+          📥 Download Quick-Start Guide
+        </a>
+        <div style="margin-top:8px;font-size:11px;color:#8A8AA0;">Opens in browser · Print or Save as PDF</div>
+      </td></tr>
+    </table>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="background:#0A0A0F;padding:18px 32px;text-align:center;border-top:1px solid #1E1E2E;">
+    <p style="color:#8A8AA0;font-size:11px;margin:0;letter-spacing:1px;">POWERED BY <strong style="color:#00E5FF;">ECLAT UNIVERSE</strong> · FELLITO ATE AGENT · DO NOT REPLY</p>
+  </td></tr>
+
+</table>
+</td></tr></table>
+</body></html>`,
+  });
+}
+
+module.exports = { sendInviteEmail, sendShiftEmail, sendGoLiveOpportunityEmail, sendWelcomeGuideEmail };
