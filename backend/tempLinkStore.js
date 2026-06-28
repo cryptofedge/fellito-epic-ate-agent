@@ -94,15 +94,18 @@ function openLink(token, requestIp, cookieToken) {
 
   // ── Returning visit — enforce anti-sharing ──────────────────────────────────
   if (link.status === 'active') {
-    // Different IP — block immediately
-    if (link.boundIp && link.boundIp !== requestIp) {
-      throw new Error('This link is already in use on another device and cannot be shared.');
-    }
-    // Same IP but missing cookie (incognito copy-paste, etc.) — block
+    // Browser token mismatch — different browser or cleared cookies
+    // IP is intentionally NOT checked — mobile users change IPs (WiFi → LTE)
     if (link.browserToken && link.browserToken !== cookieToken) {
-      throw new Error('This session is locked to the browser that originally opened it. It cannot be shared or copied.');
+      throw new Error('This session is locked to the browser that originally opened it. Please use the same browser, or ask your administrator for a new invite link.');
     }
-    // All good — return existing session
+    // All good — refresh session expiry so mobile users don't get kicked mid-shift
+    const now = Date.now();
+    if (link.sessionExpiresAt - now < SESSION_TTL_MS / 2) {
+      links[idx] = { ...link, sessionExpiresAt: now + SESSION_TTL_MS };
+      save(links);
+      return { link: links[idx], isNew: false };
+    }
     return { link, isNew: false };
   }
 

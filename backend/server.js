@@ -1863,7 +1863,7 @@ function checkReady() {
       quiz.style.borderColor = '#2A2A3E';
     }
   }
-  setTimeout(() => btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 150);
+  // no scrollIntoView — button is in a fixed footer, always visible on mobile
 }
 
 // Global error display — shows JS crashes visibly on mobile for debugging
